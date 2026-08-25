@@ -175,7 +175,7 @@ namespace {
         CHECK(flagSet(cpu, FLAG_N));
         CHECK(flagSet(cpu, FLAG_H));
 
-        // INC / DEC 不应该修改 Carry
+        // INC / DEC must not modify Carry
         CHECK(flagSet(cpu, FLAG_C));
     }
 
@@ -271,7 +271,7 @@ namespace {
 
         CHECK(cpu.step() == 8);
 
-        // CP 不允许修改 A
+        // CP must not modify A
         CHECK(cpu.A == 0x0F);
 
         CHECK(flagSet(cpu, FLAG_Z));
@@ -360,7 +360,7 @@ namespace {
         CHECK(cpu.PC == 0x0200);
         CHECK(cpu.SP == 0xFFFC);
 
-        // CALL 的返回地址 = 0103
+        // CALL's return address = 0103
         //
         // Stack:
         //
@@ -440,7 +440,7 @@ namespace {
         Bus bus;
         CPU cpu(bus);
 
-        // 手动准备 stack
+        // Prepare the stack manually
         //
         // POP AF:
         //
@@ -468,8 +468,8 @@ namespace {
 
         CHECK(cpu.A == 0x12);
 
-        // 输入虽然是 FF，
-        // F 的低 nibble 必须被清成 0。
+        // Even though the input is FF,
+        // F's low nibble must be cleared to 0.
         CHECK(cpu.F == 0xF0);
 
         CHECK(cpu.SP == 0xC002);
@@ -542,7 +542,7 @@ namespace {
         CHECK(!flagSet(cpu, FLAG_N));
         CHECK(flagSet(cpu, FLAG_H));
 
-        // BIT 不修改 C
+        // BIT must not modify C
         CHECK(flagSet(cpu, FLAG_C));
 
         // RES
@@ -550,7 +550,7 @@ namespace {
 
         CHECK(bus.read(0xC000) == 0x00);
 
-        // RES 不改变 flags
+        // RES must not change flags
         CHECK(flagSet(cpu, FLAG_C));
 
         // SET
@@ -608,7 +608,7 @@ namespace {
         CHECK(cpu.H == 0x10);
         CHECK(cpu.L == 0x00);
 
-        // ADD HL 不修改 Z
+        // ADD HL must not modify Z
         CHECK(flagSet(cpu, FLAG_Z));
 
         CHECK(!flagSet(cpu, FLAG_N));
@@ -622,7 +622,7 @@ namespace {
         CHECK(cpu.H == 0x00);
         CHECK(cpu.L == 0x00);
 
-        // Z 依然保持
+        // Z is still preserved
         CHECK(flagSet(cpu, FLAG_Z));
 
         CHECK(!flagSet(cpu, FLAG_N));

@@ -16,23 +16,46 @@ auto CPU::reset() -> void {
     SP = 0xFFFE;
     PC = 0x0100;
     ime = false;
+    imeEnableDelay = 0;
     halted = false;
 }
 
 auto CPU::step() -> int {
+    const uint8_t pending =
+        pendingInterrupts();
+
+    // --------------------------------------------
+    // A pending interrupt wakes up HALT
+    // even when IME = false
+    // --------------------------------------------
+
+    if (pending != 0) {
+        halted = false;
+
+        if (ime) {
+            return serviceInterrupt(pending);
+        }
+    }
+
+    // --------------------------------------------
+    // No pending interrupt yet,
+    // the CPU stays halted
+    // --------------------------------------------
+
     if (halted) {
         return 4;
     }
-    const uint16_t oldPC = PC;
-    const uint8_t opcode = fetch8();
-    try {
-        return execute(opcode);
-    }
-    catch (...) {
-        throw std::runtime_error(std::format(
-            "Undefined opcode: {:02X} at PC {:04X}", static_cast<unsigned>(opcode), static_cast<unsigned>(oldPC)
-        ));
-    }
+
+    // --------------------------------------------
+    // Execute one opcode normally
+    // --------------------------------------------
+
+    const int cycles =
+        execute(fetch8());
+
+    updateIME();
+
+    return cycles;
 }
 
 auto CPU::fetch8() -> uint8_t {
@@ -523,6 +546,7 @@ auto CPU::execute(uint8_t opcode) -> int {
     case 0xD9: // RETI
         PC = pop16();
         ime = true;
+        imeEnableDelay = 0;
         return 16;
     case 0xDA: return conditionalJP(getFlag(CF));
     case 0xDC: return conditionalCall(getFlag(CF));
@@ -549,21 +573,95 @@ auto CPU::execute(uint8_t opcode) -> int {
         return 12;
     }
     case 0xF2: A = bus.read(static_cast<uint16_t>(0xFF00u + C)); return 8;
-    case 0xF3: ime = false; return 4; // DI
+    case 0xF3: ime = false; imeEnableDelay = 0; return 4; // DI
     case 0xF5: push16(static_cast<uint16_t>((static_cast<uint16_t>(A) << 8) | (F & 0xF0))); return 16;
     case 0xF6: orA(fetch8()); return 8;
     case 0xF7: return restart(0x30);
     case 0xF8: { const int8_t e = static_cast<int8_t>(fetch8()); setHL(addSignedToSP(e)); return 12; }
     case 0xF9: SP = getHL(); return 8;
     case 0xFA: A = bus.read(fetch16()); return 16;
-    case 0xFB: ime = true; return 4; // EI: delay by one instruction once interrupts are implemented.
+    case 0xFB: if (!ime && imeEnableDelay == 0) { imeEnableDelay = 2; } return 4;
     case 0xFE: cpA(fetch8()); return 8;
     case 0xFF: return restart(0x38);
 
     // Undefined LR35902 opcodes: D3 DB DD E3 E4 EB EC ED F4 FC FD.
-    // Treat them as a lock-up during early development.
     default:
         throw std::runtime_error("Undefined opcode");
         return 4;
+    }
+}
+
+auto CPU::pendingInterrupts() -> uint8_t {
+    constexpr uint16_t IE = 0xFFFF;
+    constexpr uint16_t IF = 0xFF0F;
+
+    return static_cast<uint8_t>(bus.read(IE) & bus.read(IF) & 0x1Fu);
+}
+
+auto CPU::serviceInterrupt(uint8_t pending) -> int {
+    static constexpr uint16_t vectors[] = {
+        0x0040, // VBlank
+        0x0048, // LCD STAT
+        0x0050, // Timer
+        0x0058, // Serial
+        0x0060  // Joypad
+    };
+
+    constexpr uint16_t IF = 0xFF0F;
+
+    // IME is automatically disabled on interrupt entry
+    ime = false;
+    imeEnableDelay = 0;
+
+    // The interrupt ends the HALT state
+    halted = false;
+
+    for (uint8_t bit = 0; bit < 5; ++bit) {
+        const uint8_t mask =
+            static_cast<uint8_t>(1u << bit);
+
+        if ((pending & mask) == 0) {
+            continue;
+        }
+
+        // --------------------------------------------
+        // Clear the accepted IF bit
+        // --------------------------------------------
+
+        uint8_t interruptFlags =
+            bus.read(IF);
+
+        interruptFlags =
+            static_cast<uint8_t>(
+                interruptFlags
+                & static_cast<uint8_t>(~mask)
+                );
+
+        bus.write(IF, interruptFlags);
+
+        // --------------------------------------------
+        // Equivalent to CALL interrupt vector
+        // --------------------------------------------
+
+        push16(PC);
+
+        PC = vectors[bit];
+
+        // 5 M-cycles = 20 clock cycles
+        return 20;
+    }
+
+    return 0;
+}
+
+auto CPU::updateIME() -> void {
+    if (imeEnableDelay == 0) {
+        return;
+    }
+
+    --imeEnableDelay;
+
+    if (imeEnableDelay == 0) {
+        ime = true;
     }
 }

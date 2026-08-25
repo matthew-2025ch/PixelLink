@@ -27,6 +27,7 @@ private:
     uint16_t PC = 0x0100;
     bool ime = false;
     bool halted = false;
+    uint8_t imeEnableDelay = 0;
 
 #ifdef _DEBUG
 private:
@@ -78,4 +79,8 @@ private:
     auto conditionalCall(bool condition) -> int;
     auto conditionalRet(bool condition) -> int;
     auto restart(uint16_t vector) -> int;
+
+    auto pendingInterrupts() -> uint8_t;
+    auto serviceInterrupt(uint8_t pending) -> int;
+    auto updateIME() -> void;
 };
