@@ -21,6 +21,15 @@
   <ItemGroup>
     <None Include="README.md" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Bus.cpp" />
+    <ClCompile Include="CPU.cpp" />
+    <ClCompile Include="test_cpu.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Bus.hpp" />
+    <ClInclude Include="CPU.hpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>18.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>

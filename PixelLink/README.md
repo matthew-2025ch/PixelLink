@@ -10,7 +10,7 @@
 - [x] Implement CB-prefixed opcodes
 - [x] Implement stack operations
 - [x] Implement jumps, calls, and returns
-- [ ] Add CPU unit tests
+- [x] Add CPU unit tests
 
 ## Phase 2 — Interrupt System
 

@@ -11,4 +11,23 @@
   <ItemGroup>
     <None Include="README.md" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Bus.cpp">
+      <Filter>GB\CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="CPU.cpp">
+      <Filter>GB\CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="test_cpu.cpp">
+      <Filter>GB\CPU</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Bus.hpp">
+      <Filter>GB\CPU</Filter>
+    </ClInclude>
+    <ClInclude Include="CPU.hpp">
+      <Filter>GB\CPU</Filter>
+    </ClInclude>
+  </ItemGroup>
 </Project>
