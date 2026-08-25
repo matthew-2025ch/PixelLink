@@ -10,6 +10,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />
+    <None Include="CPU_test.cpp">
+      <Filter>GB\CPU</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Bus.cpp">
@@ -18,7 +21,7 @@
     <ClCompile Include="CPU.cpp">
       <Filter>GB\CPU</Filter>
     </ClCompile>
-    <ClCompile Include="test_cpu.cpp">
+    <ClCompile Include="Interrupt_test.cpp">
       <Filter>GB\CPU</Filter>
     </ClCompile>
   </ItemGroup>

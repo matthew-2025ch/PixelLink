@@ -24,7 +24,8 @@
   <ItemGroup>
     <ClCompile Include="Bus.cpp" />
     <ClCompile Include="CPU.cpp" />
-    <ClCompile Include="test_cpu.cpp" />
+    <None Include="CPU_test.cpp" />
+    <ClCompile Include="Interrupt_test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Bus.hpp" />
