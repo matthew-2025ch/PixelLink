@@ -23,12 +23,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Bus.cpp" />
+    <ClCompile Include="Cartridge.cpp" />
     <ClCompile Include="CPU.cpp" />
     <None Include="CPU_test.cpp" />
     <ClCompile Include="Interrupt_test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Bus.hpp" />
+    <ClInclude Include="Cartridge.hpp" />
     <ClInclude Include="CPU.hpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
