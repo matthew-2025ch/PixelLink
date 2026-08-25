@@ -8,4 +8,7 @@
       <UniqueIdentifier>{095632a8-587c-4d5c-825a-dd6b2cc00118}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="README.md" />
+  </ItemGroup>
 </Project>
