@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="GB">
+      <UniqueIdentifier>{7570ea3c-06b8-45e4-ac9b-78548591018d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GB\CPU">
+      <UniqueIdentifier>{095632a8-587c-4d5c-825a-dd6b2cc00118}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
