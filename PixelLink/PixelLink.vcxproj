@@ -24,9 +24,10 @@
   <ItemGroup>
     <ClCompile Include="Bus.cpp" />
     <ClCompile Include="Cartridge.cpp" />
+    <ClCompile Include="Cartridge_test.cpp" />
     <ClCompile Include="CPU.cpp" />
     <None Include="CPU_test.cpp" />
-    <ClCompile Include="Interrupt_test.cpp" />
+    <None Include="Interrupt_test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Bus.hpp" />
