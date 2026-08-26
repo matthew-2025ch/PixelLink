@@ -4,17 +4,9 @@
     <Filter Include="GB">
       <UniqueIdentifier>{7570ea3c-06b8-45e4-ac9b-78548591018d}</UniqueIdentifier>
     </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="CPU_test.cpp">
-      <Filter>GB</Filter>
-    </None>
-    <None Include="Interrupt_test.cpp">
-      <Filter>GB</Filter>
-    </None>
-    <None Include="Cartridge_test.cpp">
-      <Filter>GB</Filter>
-    </None>
+    <Filter Include="GB\Tests">
+      <UniqueIdentifier>{7bc46adf-c722-47e4-8c7e-2d54caea0bdf}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Bus.cpp">
@@ -26,7 +18,7 @@
     <ClCompile Include="Cartridge.cpp">
       <Filter>GB</Filter>
     </ClCompile>
-    <ClCompile Include="Bus_test.cpp">
+    <ClCompile Include="main.cpp">
       <Filter>GB</Filter>
     </ClCompile>
   </ItemGroup>
@@ -39,6 +31,18 @@
     </ClInclude>
     <ClInclude Include="Cartridge.hpp">
       <Filter>GB</Filter>
+    </ClInclude>
+    <ClInclude Include="Bus_test.hpp">
+      <Filter>GB\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="Cartridge_test.hpp">
+      <Filter>GB\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="CPU_test.hpp">
+      <Filter>GB\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="Interrupt_test.hpp">
+      <Filter>GB\Tests</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
