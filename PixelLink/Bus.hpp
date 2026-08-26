@@ -10,22 +10,21 @@ public:
 
     explicit Bus(Cartridge& cartridge);
 
-    auto insertCartridge(Cartridge& cartridge) noexcept
-        -> void;
-
-    auto removeCartridge() noexcept
-        -> void;
-
-    [[nodiscard]]
-    auto read(uint16_t address) const -> uint8_t;
-
-    auto write(
-        uint16_t address,
-        uint8_t value
-    ) -> void;
+    auto insertCartridge(Cartridge& cartridge) noexcept -> void;
+    auto removeCartridge() noexcept -> void;
+    [[nodiscard]] auto read(uint16_t address) const -> uint8_t;
+    auto write(uint16_t address, uint8_t value) -> void;
 
 private:
-    Cartridge* cartridge = nullptr;
+    Cartridge* cartridge_ = nullptr;
 
-    std::array<uint8_t, 0x10000> memory{};
+    // Used only when no cartridge is inserted.
+    // This keeps CPU unit tests simple.
+    std::array<uint8_t, 0x8000> testRom_{};
+    std::array<uint8_t, 0x2000> vram_{};
+    std::array<uint8_t, 0x2000> wram_{};
+    std::array<uint8_t, 0x00A0> oam_{};
+    std::array<uint8_t, 0x0080> io_{};
+    std::array<uint8_t, 0x007F> hram_{};
+    uint8_t ie_ = 0;
 };

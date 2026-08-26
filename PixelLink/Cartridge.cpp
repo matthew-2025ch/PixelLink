@@ -62,42 +62,54 @@ auto Cartridge::load(const std::filesystem::path& path) -> void {
     }
 }
 
-auto Cartridge::read(uint16_t address) const -> uint8_t {
-    if (!loaded()) {
-        throw std::runtime_error(
-            "Attempted to read from an unloaded cartridge"
-        );
+auto Cartridge::read(
+    uint16_t address
+) const -> uint8_t {
+    // ROM
+    if (address <= 0x7FFF) {
+        if (!loaded()) {
+            return 0xFF;
+        }
+
+        if (address >= rom.size()) {
+            return 0xFF;
+        }
+
+        return rom[address];
     }
 
-    if (address > 0x7FFF) {
-        throw std::out_of_range(
-            std::format(
-                "Cartridge ROM read out of range: 0x{:04X}",
-                static_cast<unsigned>(address)
-            )
-        );
-    }
-
-    if (address >= rom.size()) {
+    // External cartridge RAM
+    if (
+        address >= 0xA000 &&
+        address <= 0xBFFF
+        ) {
+        // ROM-only cartridges do not provide external RAM yet.
         return 0xFF;
     }
 
-    return rom[address];
+    return 0xFF;
 }
 
 auto Cartridge::write(
     uint16_t address,
     uint8_t value
 ) -> void {
-    (void)address;
-    (void)value;
+    // ROM / mapper control
+    if (address <= 0x7FFF) {
+        // ROM-only cartridges ignore writes.
+        return;
+    }
 
-    /*
-     * ROM-only cartridges do not modify ROM when the CPU writes
-     * to the cartridge ROM address range.
-     *
-     * Mapper cartridges will use these writes as control commands.
-     */
+    // External cartridge RAM
+    if (
+        address >= 0xA000 &&
+        address <= 0xBFFF
+        ) {
+        // ROM-only cartridges do not provide external RAM yet.
+        return;
+    }
+
+    (void)value;
 }
 
 auto Cartridge::loaded() const noexcept -> bool {
