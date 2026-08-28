@@ -18,7 +18,7 @@
     <ClCompile Include="Cartridge.cpp">
       <Filter>GB</Filter>
     </ClCompile>
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="Main.cpp">
       <Filter>GB</Filter>
     </ClCompile>
   </ItemGroup>
@@ -44,5 +44,8 @@
     <ClInclude Include="Interrupt_test.hpp">
       <Filter>GB\Tests</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Project_plan.md" />
   </ItemGroup>
 </Project>

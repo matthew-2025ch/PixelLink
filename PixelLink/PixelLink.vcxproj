@@ -20,7 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Bus.cpp" />
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="Main.cpp" />
     <ClInclude Include="Bus_test.hpp" />
     <ClCompile Include="Cartridge.cpp" />
     <ClInclude Include="Cartridge_test.hpp" />
@@ -32,6 +32,9 @@
     <ClInclude Include="Bus.hpp" />
     <ClInclude Include="Cartridge.hpp" />
     <ClInclude Include="CPU.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Project_plan.md" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>18.0</VCProjectVersion>
