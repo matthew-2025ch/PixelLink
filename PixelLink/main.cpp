@@ -1,11 +1,32 @@
-#include"Bus_test.hpp"
-#include"CPU_test.hpp"
-#include"Interrupt_test.hpp"
-#include"Cartridge_test.hpp"
-auto main() -> int {
-	BusTest::BusTest();
-	CPUTest::CPUTest();
-	InterruptTest::InterruptTest();
-	CartridgeTest::CartridgeTest();
-	return 0;
+#include <iostream>
+
+#include "TestSuites.hpp"
+
+int main() {
+    try {
+        std::cout
+            << "==============================\n"
+            << " Game Boy Emulator Tests\n"
+            << "==============================\n\n";
+
+        CPUTest::run();
+        InterruptTest::run();
+        CartridgeTest::run();
+        BusTest::run();
+    }
+    catch (...) {
+        std::cerr
+            << "\n==============================\n"
+            << " TESTS FAILED\n"
+            << "==============================\n";
+
+        return 1;
+    }
+
+    std::cout
+        << "\n==============================\n"
+        << " ALL TESTS PASSED\n"
+        << "==============================\n";
+
+    return 0;
 }

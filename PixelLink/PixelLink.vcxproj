@@ -20,18 +20,21 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Bus.cpp" />
+    <ClCompile Include="Bus_test.cpp" />
+    <ClCompile Include="Cartridge_test.cpp" />
+    <ClCompile Include="CPU_test.cpp" />
+    <ClCompile Include="Interrupt_test.cpp" />
     <ClCompile Include="Main.cpp" />
-    <ClInclude Include="Bus_test.hpp" />
     <ClCompile Include="Cartridge.cpp" />
-    <ClInclude Include="Cartridge_test.hpp" />
     <ClCompile Include="CPU.cpp" />
-    <ClInclude Include="CPU_test.hpp" />
-    <ClInclude Include="Interrupt_test.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Bus.hpp" />
     <ClInclude Include="Cartridge.hpp" />
     <ClInclude Include="CPU.hpp" />
+    <ClInclude Include="TestFramework.hpp" />
+    <ClInclude Include="TestSuites.hpp" />
+    <ClInclude Include="TestUtils.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Project_plan.md" />
