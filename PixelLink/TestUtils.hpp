@@ -5,16 +5,18 @@
 
 #include "Bus.hpp"
 
-namespace Test {
+using namespace PixelLink::GameBoy;
 
-inline void load(
+namespace PixelLink::Test {
+
+inline void Load(
     Bus& bus,
     uint16_t address,
     std::initializer_list<uint8_t> bytes
 ) {
     for (const uint8_t byte : bytes) {
-        bus.write(address++, byte);
+        bus.Write(address++, byte);
     }
 }
 
-} // namespace Test
+} // namespace PixelLink::Test

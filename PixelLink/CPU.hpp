@@ -5,12 +5,14 @@
 #include <format>
 #include "Bus.hpp"
 
+namespace PixelLink::GameBoy {
+
 class CPU {
 public:
     explicit CPU(Bus& bus);
 
-    auto reset() -> void;
-    auto step() -> int;
+    auto Reset() -> void;
+    auto Step() -> int;
 
 #ifndef _DEBUG
 private:
@@ -41,46 +43,48 @@ private:
 
     Bus& bus;
 
-    auto fetch8() -> uint8_t;
-    auto fetch16() -> uint16_t;
-    auto execute(uint8_t opcode) -> int;
-    auto executeCB(uint8_t opcode) -> int;
+    auto Fetch8() -> uint8_t;
+    auto Fetch16() -> uint16_t;
+    auto Execute(uint8_t opcode) -> int;
+    auto ExecuteCB(uint8_t opcode) -> int;
 
-    auto getFlag(Flag flag) const -> bool;
-    auto setFlag(Flag flag, bool value) -> void;
-    auto setZNHC(bool z, bool n, bool h, bool c) -> void;
+    auto GetFlag(Flag flag) const -> bool;
+    auto SetFlag(Flag flag, bool value) -> void;
+    auto SetZNHC(bool z, bool n, bool h, bool c) -> void;
 
-    auto getBC() const -> uint16_t;
-    auto getDE() const -> uint16_t;
-    auto getHL() const -> uint16_t;
-    auto setBC(uint16_t value) -> void;
-    auto setDE(uint16_t value) -> void;
-    auto setHL(uint16_t value) -> void;
+    auto GetBC() const -> uint16_t;
+    auto GetDE() const -> uint16_t;
+    auto GetHL() const -> uint16_t;
+    auto SetBC(uint16_t value) -> void;
+    auto SetDE(uint16_t value) -> void;
+    auto SetHL(uint16_t value) -> void;
 
-    auto readR8(uint8_t code) -> uint8_t;
-    auto writeR8(uint8_t code, uint8_t value) -> void;
+    auto ReadR8(uint8_t code) -> uint8_t;
+    auto WriteR8(uint8_t code, uint8_t value) -> void;
 
-    auto push16(uint16_t value) -> void;
-    auto pop16() -> uint16_t;
+    auto Push16(uint16_t value) -> void;
+    auto Pop16() -> uint16_t;
 
-    auto inc8(uint8_t value) -> uint8_t;
-    auto dec8(uint8_t value) -> uint8_t;
-    auto addA(uint8_t value, bool withCarry) -> void;
-    auto subA(uint8_t value, bool withCarry) -> void;
-    auto cpA(uint8_t value) -> void;
-    auto andA(uint8_t value) -> void;
-    auto xorA(uint8_t value) -> void;
-    auto orA(uint8_t value) -> void;
-    auto addHL(uint16_t value) -> void;
-    auto addSignedToSP(int8_t offset) -> uint16_t;
+    auto Inc8(uint8_t value) -> uint8_t;
+    auto Dec8(uint8_t value) -> uint8_t;
+    auto AddA(uint8_t value, bool withCarry) -> void;
+    auto SubA(uint8_t value, bool withCarry) -> void;
+    auto CpA(uint8_t value) -> void;
+    auto AndA(uint8_t value) -> void;
+    auto XorA(uint8_t value) -> void;
+    auto OrA(uint8_t value) -> void;
+    auto AddHL(uint16_t value) -> void;
+    auto AddSignedToSP(int8_t offset) -> uint16_t;
 
-    auto relativeJump(bool condition) -> int;
-    auto conditionalJP(bool condition) -> int;
-    auto conditionalCall(bool condition) -> int;
-    auto conditionalRet(bool condition) -> int;
-    auto restart(uint16_t vector) -> int;
+    auto RelativeJump(bool condition) -> int;
+    auto ConditionalJP(bool condition) -> int;
+    auto ConditionalCall(bool condition) -> int;
+    auto ConditionalRet(bool condition) -> int;
+    auto Restart(uint16_t vector) -> int;
 
-    auto pendingInterrupts() -> uint8_t;
-    auto serviceInterrupt(uint8_t pending) -> int;
-    auto updateIME() -> void;
+    auto PendingInterrupts() -> uint8_t;
+    auto ServiceInterrupt(uint8_t pending) -> int;
+    auto UpdateIME() -> void;
 };
+
+} // namespace PixelLink::GameBoy

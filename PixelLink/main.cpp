@@ -9,11 +9,12 @@ int main() {
             << " Game Boy Emulator Tests\n"
             << "==============================\n\n";
 
-        CPUTest::run();
-        InterruptTest::run();
-        CartridgeTest::run();
-        BusTest::run();
-        TimerTest::run();
+        PixelLink::Test::GameBoy::CPUTest::run();
+        PixelLink::Test::GameBoy::InterruptTest::run();
+        PixelLink::Test::GameBoy::CartridgeTest::run();
+        PixelLink::Test::GameBoy::BusTest::run();
+        PixelLink::Test::GameBoy::TimerTest::run();
+        PixelLink::Test::GameBoy::TimerIntegrationTest::run();
     }
     catch (...) {
         std::cerr

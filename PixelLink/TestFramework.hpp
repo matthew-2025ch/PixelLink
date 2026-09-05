@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <string_view>
 
-namespace Test {
+namespace PixelLink::Test {
 
 #define CHECK(expr)                                                   \
     do {                                                              \
@@ -47,4 +47,4 @@ void run(
     }
 }
 
-} // namespace Test
+} // namespace PixelLink::Test

@@ -3,6 +3,9 @@
 #include <array>
 #include <cstdint>
 #include "Cartridge.hpp"
+#include "Timer.hpp"
+
+namespace PixelLink::GameBoy {
 
 class Bus {
 public:
@@ -10,12 +13,15 @@ public:
 
     explicit Bus(Cartridge& cartridge);
 
-    auto insertCartridge(Cartridge& cartridge) noexcept -> void;
-    auto removeCartridge() noexcept -> void;
-    [[nodiscard]] auto read(uint16_t address) const -> uint8_t;
-    auto write(uint16_t address, uint8_t value) -> void;
+    auto InsertCartridge(Cartridge& cartridge) noexcept -> void;
+    auto RemoveCartridge() noexcept -> void;
+    [[nodiscard]] auto Read(uint16_t address) const -> uint8_t;
+    auto Write(uint16_t address, uint8_t value) -> void;
+
+    auto Tick(uint32_t tCycle) -> void;
 
 private:
+    Timer timer_;
     Cartridge* cartridge_ = nullptr;
 
     // Used only when no cartridge is inserted.
@@ -28,3 +34,5 @@ private:
     std::array<uint8_t, 0x007F> hram_{};
     uint8_t ie_ = 0;
 };
+
+} // namespace PixelLink::GameBoy

@@ -6,7 +6,9 @@
 #include "TestSuites.hpp"
 #include "TestUtils.hpp"
 
-namespace InterruptTest {
+using namespace PixelLink::GameBoy;
+
+namespace PixelLink::Test::GameBoy::InterruptTest {
 
 namespace {
 
@@ -17,26 +19,26 @@ void testEIDelay() {
     Bus bus;
     CPU cpu(bus);
 
-    Test::load(bus, 0x0100, {
+    Test::Load(bus, 0x0100, {
         0xFB, // EI
         0x00, // NOP
         0x00  // should NOT execute before interrupt
     });
 
-    bus.write(IE, 0x01);
-    bus.write(IF, 0x01);
+    bus.Write(IE, 0x01);
+    bus.Write(IF, 0x01);
 
     CHECK(cpu.ime == false);
 
-    CHECK(cpu.step() == 4);
+    CHECK(cpu.Step() == 4);
     CHECK(cpu.PC == 0x0101);
     CHECK(cpu.ime == false);
 
-    CHECK(cpu.step() == 4);
+    CHECK(cpu.Step() == 4);
     CHECK(cpu.PC == 0x0102);
     CHECK(cpu.ime == true);
 
-    CHECK(cpu.step() == 20);
+    CHECK(cpu.Step() == 20);
     CHECK(cpu.PC == 0x0040);
     CHECK(cpu.ime == false);
 }
@@ -45,29 +47,29 @@ void testVBlankInterrupt() {
     Bus bus;
     CPU cpu(bus);
 
-    Test::load(bus, 0x0100, {
+    Test::Load(bus, 0x0100, {
         0xFB, // EI
         0x00  // NOP
     });
 
-    bus.write(IE, 0x01);
-    bus.write(IF, 0x01);
+    bus.Write(IE, 0x01);
+    bus.Write(IF, 0x01);
 
-    cpu.step();
-    cpu.step();
+    cpu.Step();
+    cpu.Step();
 
     CHECK(cpu.PC == 0x0102);
     CHECK(cpu.SP == 0xFFFE);
 
-    CHECK(cpu.step() == 20);
+    CHECK(cpu.Step() == 20);
 
     CHECK(cpu.PC == 0x0040);
 
     CHECK(cpu.SP == 0xFFFC);
-    CHECK(bus.read(0xFFFC) == 0x02);
-    CHECK(bus.read(0xFFFD) == 0x01);
+    CHECK(bus.Read(0xFFFC) == 0x02);
+    CHECK(bus.Read(0xFFFD) == 0x01);
 
-    CHECK((bus.read(IF) & 0x01) == 0);
+    CHECK((bus.Read(IF) & 0x01) == 0);
     CHECK(cpu.ime == false);
 }
 
@@ -75,14 +77,14 @@ void testInterruptPriority() {
     Bus bus;
     CPU cpu(bus);
 
-    Test::load(bus, 0x0100, {
+    Test::Load(bus, 0x0100, {
         0xFB,
         0x00
     });
 
-    bus.write(IE, 0x1F);
+    bus.Write(IE, 0x1F);
 
-    bus.write(
+    bus.Write(
         IF,
         static_cast<uint8_t>(
             (1u << 0)
@@ -91,83 +93,83 @@ void testInterruptPriority() {
         )
     );
 
-    cpu.step();
-    cpu.step();
+    cpu.Step();
+    cpu.Step();
 
-    CHECK(cpu.step() == 20);
+    CHECK(cpu.Step() == 20);
 
     CHECK(cpu.PC == 0x0040);
-    CHECK((bus.read(IF) & 0x01) == 0);
-    CHECK((bus.read(IF) & 0x04) != 0);
-    CHECK((bus.read(IF) & 0x10) != 0);
+    CHECK((bus.Read(IF) & 0x01) == 0);
+    CHECK((bus.Read(IF) & 0x04) != 0);
+    CHECK((bus.Read(IF) & 0x10) != 0);
 }
 
 void testInterruptWaitsWhenIMEDisabled() {
     Bus bus;
     CPU cpu(bus);
 
-    Test::load(bus, 0x0100, {
+    Test::Load(bus, 0x0100, {
         0x00,
         0x00
     });
 
-    bus.write(IE, 0x01);
-    bus.write(IF, 0x01);
+    bus.Write(IE, 0x01);
+    bus.Write(IF, 0x01);
 
     CHECK(cpu.ime == false);
 
-    CHECK(cpu.step() == 4);
+    CHECK(cpu.Step() == 4);
     CHECK(cpu.PC == 0x0101);
-    CHECK((bus.read(IF) & 0x01) != 0);
+    CHECK((bus.Read(IF) & 0x01) != 0);
 }
 
 void testHaltWakeWithoutIME() {
     Bus bus;
     CPU cpu(bus);
 
-    Test::load(bus, 0x0100, {
+    Test::Load(bus, 0x0100, {
         0x76,
         0x00
     });
 
-    CHECK(cpu.step() == 4);
+    CHECK(cpu.Step() == 4);
     CHECK(cpu.halted);
     CHECK(cpu.PC == 0x0101);
 
-    CHECK(cpu.step() == 4);
+    CHECK(cpu.Step() == 4);
     CHECK(cpu.halted);
     CHECK(cpu.PC == 0x0101);
 
-    bus.write(IE, 0x01);
-    bus.write(IF, 0x01);
+    bus.Write(IE, 0x01);
+    bus.Write(IF, 0x01);
 
-    CHECK(cpu.step() == 4);
+    CHECK(cpu.Step() == 4);
 
     CHECK(!cpu.halted);
     CHECK(cpu.PC == 0x0102);
-    CHECK((bus.read(IF) & 0x01) != 0);
+    CHECK((bus.Read(IF) & 0x01) != 0);
 }
 
 void testDICancelsEI() {
     Bus bus;
     CPU cpu(bus);
 
-    Test::load(bus, 0x0100, {
+    Test::Load(bus, 0x0100, {
         0xFB,
         0xF3,
         0x00
     });
 
-    bus.write(IE, 0x01);
-    bus.write(IF, 0x01);
+    bus.Write(IE, 0x01);
+    bus.Write(IF, 0x01);
 
-    CHECK(cpu.step() == 4);
+    CHECK(cpu.Step() == 4);
     CHECK(cpu.ime == false);
 
-    CHECK(cpu.step() == 4);
+    CHECK(cpu.Step() == 4);
     CHECK(cpu.ime == false);
 
-    CHECK(cpu.step() == 4);
+    CHECK(cpu.Step() == 4);
     CHECK(cpu.PC == 0x0103);
     CHECK(cpu.ime == false);
 }
@@ -176,27 +178,27 @@ void testRETI() {
     Bus bus;
     CPU cpu(bus);
 
-    Test::load(bus, 0x0100, {
+    Test::Load(bus, 0x0100, {
         0xFB,
         0x00
     });
 
-    Test::load(bus, 0x0040, {
+    Test::Load(bus, 0x0040, {
         0xD9
     });
 
-    bus.write(IE, 0x01);
-    bus.write(IF, 0x01);
+    bus.Write(IE, 0x01);
+    bus.Write(IF, 0x01);
 
-    cpu.step();
-    cpu.step();
+    cpu.Step();
+    cpu.Step();
 
-    CHECK(cpu.step() == 20);
+    CHECK(cpu.Step() == 20);
 
     CHECK(cpu.PC == 0x0040);
     CHECK(cpu.ime == false);
 
-    CHECK(cpu.step() == 16);
+    CHECK(cpu.Step() == 16);
 
     CHECK(cpu.PC == 0x0102);
     CHECK(cpu.SP == 0xFFFE);
@@ -221,7 +223,7 @@ void testInterruptVectors() {
         Bus bus;
         CPU cpu(bus);
 
-        Test::load(bus, 0x0100, {
+        Test::Load(bus, 0x0100, {
             0xFB,
             0x00
         });
@@ -231,15 +233,15 @@ void testInterruptVectors() {
                 1u << test.bit
             );
 
-        bus.write(IE, mask);
-        bus.write(IF, mask);
+        bus.Write(IE, mask);
+        bus.Write(IF, mask);
 
-        cpu.step();
-        cpu.step();
+        cpu.Step();
+        cpu.Step();
 
-        CHECK(cpu.step() == 20);
+        CHECK(cpu.Step() == 20);
         CHECK(cpu.PC == test.vector);
-        CHECK((bus.read(IF) & mask) == 0);
+        CHECK((bus.Read(IF) & mask) == 0);
     }
 }
 
@@ -256,4 +258,4 @@ void run() {
     Test::run("Interrupt / vectors", testInterruptVectors);
 }
 
-} // namespace InterruptTest
+} // namespace PixelLink::Test::InterruptTest

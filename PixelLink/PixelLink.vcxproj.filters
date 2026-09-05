@@ -1,66 +1,70 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="GB">
-      <UniqueIdentifier>{7570ea3c-06b8-45e4-ac9b-78548591018d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="GB\Tests">
+    <Filter Include="Test">
       <UniqueIdentifier>{7bc46adf-c722-47e4-8c7e-2d54caea0bdf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Test\GameBoy">
+      <UniqueIdentifier>{133871df-561c-44ab-ae91-4caf78519c75}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GameBoy">
+      <UniqueIdentifier>{7570ea3c-06b8-45e4-ac9b-78548591018d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Bus.cpp">
-      <Filter>GB</Filter>
+      <Filter>GameBoy</Filter>
     </ClCompile>
     <ClCompile Include="CPU.cpp">
-      <Filter>GB</Filter>
+      <Filter>GameBoy</Filter>
     </ClCompile>
     <ClCompile Include="Cartridge.cpp">
-      <Filter>GB</Filter>
-    </ClCompile>
-    <ClCompile Include="Main.cpp">
-      <Filter>GB</Filter>
-    </ClCompile>
-    <ClCompile Include="BusTest.cpp">
-      <Filter>GB\Tests</Filter>
-    </ClCompile>
-    <ClCompile Include="CartridgeTest.cpp">
-      <Filter>GB\Tests</Filter>
-    </ClCompile>
-    <ClCompile Include="CPUTest.cpp">
-      <Filter>GB\Tests</Filter>
-    </ClCompile>
-    <ClCompile Include="InterruptTest.cpp">
-      <Filter>GB\Tests</Filter>
+      <Filter>GameBoy</Filter>
     </ClCompile>
     <ClCompile Include="Timer.cpp">
-      <Filter>GB</Filter>
+      <Filter>GameBoy</Filter>
+    </ClCompile>
+    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="BusTest.cpp">
+      <Filter>Test\GameBoy</Filter>
+    </ClCompile>
+    <ClCompile Include="CartridgeTest.cpp">
+      <Filter>Test\GameBoy</Filter>
+    </ClCompile>
+    <ClCompile Include="CPUTest.cpp">
+      <Filter>Test\GameBoy</Filter>
+    </ClCompile>
+    <ClCompile Include="InterruptTest.cpp">
+      <Filter>Test\GameBoy</Filter>
+    </ClCompile>
+    <ClCompile Include="TimerIntegrationTest.cpp">
+      <Filter>Test\GameBoy</Filter>
     </ClCompile>
     <ClCompile Include="TimerTest.cpp">
-      <Filter>GB\Tests</Filter>
+      <Filter>Test\GameBoy</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Bus.hpp">
-      <Filter>GB</Filter>
+      <Filter>GameBoy</Filter>
     </ClInclude>
     <ClInclude Include="CPU.hpp">
-      <Filter>GB</Filter>
+      <Filter>GameBoy</Filter>
     </ClInclude>
     <ClInclude Include="Cartridge.hpp">
-      <Filter>GB</Filter>
-    </ClInclude>
-    <ClInclude Include="TestFramework.hpp">
-      <Filter>GB\Tests</Filter>
-    </ClInclude>
-    <ClInclude Include="TestSuites.hpp">
-      <Filter>GB\Tests</Filter>
-    </ClInclude>
-    <ClInclude Include="TestUtils.hpp">
-      <Filter>GB\Tests</Filter>
+      <Filter>GameBoy</Filter>
     </ClInclude>
     <ClInclude Include="Timer.hpp">
-      <Filter>GB</Filter>
+      <Filter>GameBoy</Filter>
+    </ClInclude>
+    <ClInclude Include="TestFramework.hpp">
+      <Filter>Test\GameBoy</Filter>
+    </ClInclude>
+    <ClInclude Include="TestSuites.hpp">
+      <Filter>Test\GameBoy</Filter>
+    </ClInclude>
+    <ClInclude Include="TestUtils.hpp">
+      <Filter>Test\GameBoy</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

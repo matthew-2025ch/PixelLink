@@ -7,6 +7,8 @@
 #include <string_view>
 #include <vector>
 
+namespace PixelLink::GameBoy {
+
 struct CartridgeHeader {
     std::string title;
 
@@ -25,24 +27,26 @@ class Cartridge {
 public:
     Cartridge() = default;
 
-    auto load(const std::filesystem::path& path) -> void;
+    auto Load(const std::filesystem::path& path) -> void;
 
-    auto read(uint16_t address) const -> uint8_t;
-    auto write(uint16_t address, uint8_t value) -> void;
+    auto Read(uint16_t address) const -> uint8_t;
+    auto Write(uint16_t address, uint8_t value) -> void;
 
-    [[nodiscard]] auto loaded() const noexcept -> bool;
-    [[nodiscard]] auto size() const noexcept -> std::size_t;
-    [[nodiscard]] auto header() const noexcept -> const CartridgeHeader&;
-    auto printInfo(std::ostream& os) const -> void;
+    [[nodiscard]] auto Loaded() const noexcept -> bool;
+    [[nodiscard]] auto Size() const noexcept -> std::size_t;
+    [[nodiscard]] auto Header() const noexcept -> const CartridgeHeader&;
+    auto PrintInfo(std::ostream& os) const -> void;
 
 private:
     std::vector<uint8_t> rom;
     CartridgeHeader cartridgeHeader;
 
-    auto parseHeader() -> void;
+    auto ParseHeader() -> void;
 
-    [[nodiscard]] auto calculateHeaderChecksum() const -> uint8_t;
-    [[nodiscard]] static auto decodeRomSize(uint8_t code) -> std::size_t;
-    [[nodiscard]] static auto decodeRamSize(uint8_t code) -> std::size_t;
-    [[nodiscard]] static auto cartridgeTypeName(uint8_t type) -> std::string_view;
+    [[nodiscard]] auto CalculateHeaderChecksum() const -> uint8_t;
+    [[nodiscard]] static auto DecodeROMSize(uint8_t code) -> std::size_t;
+    [[nodiscard]] static auto DecodeRAMSize(uint8_t code) -> std::size_t;
+    [[nodiscard]] static auto CartridgeTypeName(uint8_t type) -> std::string_view;
 };
+
+} // namespace PixelLink::GameBoy

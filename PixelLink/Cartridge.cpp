@@ -5,7 +5,9 @@
 #include <ostream>
 #include <stdexcept>
 
-auto Cartridge::load(const std::filesystem::path& path) -> void {
+namespace PixelLink::GameBoy {
+
+auto Cartridge::Load(const std::filesystem::path& path) -> void {
     std::ifstream file(
         path,
         std::ios::binary | std::ios::ate
@@ -43,31 +45,31 @@ auto Cartridge::load(const std::filesystem::path& path) -> void {
     )) {
         throw std::runtime_error(
             std::format(
-                "Failed to read ROM file: {}",
+                "Failed to Read ROM file: {}",
                 path.string()
             )
         );
     }
 
-    parseHeader();
+    ParseHeader();
 
     if (cartridgeHeader.type != 0x00) {
         throw std::runtime_error(
             std::format(
                 "Unsupported cartridge type: {} (0x{:02X})",
-                cartridgeTypeName(cartridgeHeader.type),
+                CartridgeTypeName(cartridgeHeader.type),
                 static_cast<unsigned>(cartridgeHeader.type)
             )
         );
     }
 }
 
-auto Cartridge::read(
+auto Cartridge::Read(
     uint16_t address
 ) const -> uint8_t {
     // ROM
     if (address <= 0x7FFF) {
-        if (!loaded()) {
+        if (!Loaded()) {
             return 0xFF;
         }
 
@@ -90,13 +92,13 @@ auto Cartridge::read(
     return 0xFF;
 }
 
-auto Cartridge::write(
+auto Cartridge::Write(
     uint16_t address,
     uint8_t value
 ) -> void {
     // ROM / mapper control
     if (address <= 0x7FFF) {
-        // ROM-only cartridges ignore writes.
+        // ROM-only cartridges ignore Writes.
         return;
     }
 
@@ -112,20 +114,20 @@ auto Cartridge::write(
     (void)value;
 }
 
-auto Cartridge::loaded() const noexcept -> bool {
+auto Cartridge::Loaded() const noexcept -> bool {
     return !rom.empty();
 }
 
-auto Cartridge::size() const noexcept -> std::size_t {
+auto Cartridge::Size() const noexcept -> std::size_t {
     return rom.size();
 }
 
-auto Cartridge::header() const noexcept
+auto Cartridge::Header() const noexcept
 -> const CartridgeHeader& {
     return cartridgeHeader;
 }
 
-auto Cartridge::parseHeader() -> void {
+auto Cartridge::ParseHeader() -> void {
     cartridgeHeader = {};
 
     for (
@@ -166,22 +168,22 @@ auto Cartridge::parseHeader() -> void {
         rom[0x014D];
 
     cartridgeHeader.declaredRomSize =
-        decodeRomSize(
+        DecodeROMSize(
             cartridgeHeader.romSizeCode
         );
 
     cartridgeHeader.declaredRamSize =
-        decodeRamSize(
+        DecodeRAMSize(
             cartridgeHeader.ramSizeCode
         );
 
     cartridgeHeader.headerChecksumValid =
-        calculateHeaderChecksum()
+        CalculateHeaderChecksum()
         ==
         cartridgeHeader.headerChecksum;
 }
 
-auto Cartridge::calculateHeaderChecksum() const
+auto Cartridge::CalculateHeaderChecksum() const
 -> uint8_t {
     uint8_t checksum = 0;
 
@@ -200,7 +202,7 @@ auto Cartridge::calculateHeaderChecksum() const
     return checksum;
 }
 
-auto Cartridge::decodeRomSize(uint8_t code)
+auto Cartridge::DecodeROMSize(uint8_t code)
 -> std::size_t {
     if (code <= 0x08) {
         return
@@ -223,7 +225,7 @@ auto Cartridge::decodeRomSize(uint8_t code)
     }
 }
 
-auto Cartridge::decodeRamSize(uint8_t code)
+auto Cartridge::DecodeRAMSize(uint8_t code)
 -> std::size_t {
     switch (code) {
     case 0x00:
@@ -246,7 +248,7 @@ auto Cartridge::decodeRamSize(uint8_t code)
     }
 }
 
-auto Cartridge::cartridgeTypeName(uint8_t type)
+auto Cartridge::CartridgeTypeName(uint8_t type)
 -> std::string_view {
     switch (type) {
     case 0x00:
@@ -311,8 +313,8 @@ auto Cartridge::cartridgeTypeName(uint8_t type)
     }
 }
 
-auto Cartridge::printInfo(std::ostream& os) const -> void {
-    if (!loaded()) {
+auto Cartridge::PrintInfo(std::ostream& os) const -> void {
+    if (!Loaded()) {
         os << "No cartridge loaded.\n";
         return;
     }
@@ -326,7 +328,7 @@ auto Cartridge::printInfo(std::ostream& os) const -> void {
         "Header checksum: 0x{:02X}\n"
         "Header checksum valid: {}\n",
         cartridgeHeader.title,
-        cartridgeTypeName(cartridgeHeader.type),
+        CartridgeTypeName(cartridgeHeader.type),
         static_cast<unsigned>(
             cartridgeHeader.type
             ),
@@ -341,3 +343,5 @@ auto Cartridge::printInfo(std::ostream& os) const -> void {
         : "no"
     );
 }
+
+} // namespace PixelLink::GameBoy

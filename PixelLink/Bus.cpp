@@ -1,24 +1,26 @@
 #include "Bus.hpp"
 
+namespace PixelLink::GameBoy {
+
 Bus::Bus(Cartridge& cartridge)
     : cartridge_(&cartridge) {
 }
 
-auto Bus::insertCartridge(
+auto Bus::InsertCartridge(
     Cartridge& cartridge
 ) noexcept -> void {
     cartridge_ = &cartridge;
 }
 
-auto Bus::removeCartridge() noexcept -> void {
+auto Bus::RemoveCartridge() noexcept -> void {
     cartridge_ = nullptr;
 }
 
-auto Bus::read(uint16_t address) const -> uint8_t {
+auto Bus::Read(uint16_t address) const -> uint8_t {
     // Cartridge ROM
     if (address <= 0x7FFF) {
         if (cartridge_ != nullptr) {
-            return cartridge_->read(address);
+            return cartridge_->Read(address);
         }
 
         return testRom_[address];
@@ -32,7 +34,7 @@ auto Bus::read(uint16_t address) const -> uint8_t {
     // Cartridge RAM / external hardware
     if (address <= 0xBFFF) {
         if (cartridge_ != nullptr) {
-            return cartridge_->read(address);
+            return cartridge_->Read(address);
         }
 
         return 0xFF;
@@ -58,6 +60,11 @@ auto Bus::read(uint16_t address) const -> uint8_t {
         return 0xFF;
     }
 
+    // Timer registers
+    if (0xFF04 <= address && address <= 0xFF07) {
+        return timer_.Read(address);
+    }
+
     // I/O registers
     if (address <= 0xFF7F) {
         return io_[address - 0xFF00];
@@ -72,14 +79,14 @@ auto Bus::read(uint16_t address) const -> uint8_t {
     return ie_;
 }
 
-auto Bus::write(
+auto Bus::Write(
     uint16_t address,
     uint8_t value
 ) -> void {
     // Cartridge ROM / MBC control
     if (address <= 0x7FFF) {
         if (cartridge_ != nullptr) {
-            cartridge_->write(address, value);
+            cartridge_->Write(address, value);
         }
         else {
             testRom_[address] = value;
@@ -97,7 +104,7 @@ auto Bus::write(
     // Cartridge RAM / external hardware
     if (address <= 0xBFFF) {
         if (cartridge_ != nullptr) {
-            cartridge_->write(address, value);
+            cartridge_->Write(address, value);
         }
 
         return;
@@ -126,6 +133,12 @@ auto Bus::write(
         return;
     }
 
+    // Timer registers mapping
+    if (0xFF04 <= address && address <= 0xFF07) {
+        timer_.Write(address, value);
+        return;
+    }
+
     // I/O registers
     if (address <= 0xFF7F) {
         io_[address - 0xFF00] = value;
@@ -141,3 +154,14 @@ auto Bus::write(
     // Interrupt Enable
     ie_ = value;
 }
+
+auto Bus::Tick(uint32_t tCycles)->void {
+	timer_.Tick(tCycles);
+    if (timer_.ConsumeInterruptRequest()) {
+        constexpr uint16_t IF = 0xFF0F;
+        constexpr uint8_t TIMER_INTERRUPT = 1u << 2;
+        Write(IF, static_cast<uint8_t>(Read(IF) | TIMER_INTERRUPT));
+    }
+}
+
+} // namespace PixelLink::GameBoy

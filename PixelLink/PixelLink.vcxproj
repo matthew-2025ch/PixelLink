@@ -28,6 +28,7 @@
     <ClCompile Include="Cartridge.cpp" />
     <ClCompile Include="CPU.cpp" />
     <ClCompile Include="Timer.cpp" />
+    <ClCompile Include="TimerIntegrationTest.cpp" />
     <ClCompile Include="TimerTest.cpp" />
   </ItemGroup>
   <ItemGroup>

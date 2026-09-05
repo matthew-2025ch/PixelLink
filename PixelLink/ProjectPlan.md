@@ -26,11 +26,11 @@
    - [x] IE
 
 5. Timer
-   - [ ] DIV
-   - [ ] TIMA
-   - [ ] TMA
-   - [ ] TAC
-   - [ ] Timer interrupt
+   - [x] DIV
+   - [x] TIMA
+   - [x] TMA
+   - [x] TAC
+   - [x] Timer interrupt
 
 6. Emulator Core
    - [ ] GameBoy class

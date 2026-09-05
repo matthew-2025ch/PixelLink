@@ -2,6 +2,8 @@
 
 #include <stdexcept>
 
+namespace PixelLink::GameBoy {
+
 namespace {
 
     constexpr uint16_t DIV = 0xFF04;
@@ -11,13 +13,13 @@ namespace {
 
 } // namespace
 
-void Timer::tick(uint32_t tCycles) {
+void Timer::Tick(uint32_t tCycles) {
     for (uint32_t i = 0; i < tCycles; ++i) {
-        tickOneCycle();
+        TickOneCycle();
     }
 }
 
-void Timer::tickOneCycle() {
+void Timer::TickOneCycle() {
     // Handle delayed TIMA reload after overflow.
     if (overflowDelay_ > 0) {
         --overflowDelay_;
@@ -28,19 +30,19 @@ void Timer::tickOneCycle() {
         }
     }
 
-    const bool oldSignal = timerSignal();
+    const bool oldSignal = TimerSignal();
 
     ++systemCounter_;
 
-    const bool newSignal = timerSignal();
+    const bool newSignal = TimerSignal();
 
     // TIMA increments on the falling edge of the selected timer signal.
     if (oldSignal && !newSignal) {
-        incrementTima();
+        IncrementTima();
     }
 }
 
-bool Timer::timerSignal() const {
+bool Timer::TimerSignal() const {
     // TAC bit 2 enables TIMA.
     if ((tac_ & 0x04) == 0) {
         return false;
@@ -58,7 +60,7 @@ bool Timer::timerSignal() const {
     return ((systemCounter_ >> bit) & 0x01) != 0;
 }
 
-void Timer::incrementTima() {
+void Timer::IncrementTima() {
     if (overflowDelay_ > 0) {
         return;
     }
@@ -74,7 +76,7 @@ void Timer::incrementTima() {
     }
 }
 
-uint8_t Timer::read(uint16_t address) const {
+uint8_t Timer::Read(uint16_t address) const {
     switch (address) {
     case DIV:
         return static_cast<uint8_t>(systemCounter_ >> 8);
@@ -86,26 +88,26 @@ uint8_t Timer::read(uint16_t address) const {
         return tma_;
 
     case TAC:
-        // Unused TAC bits normally read as 1.
+        // Unused TAC bits normally Read as 1.
         return tac_ | 0xF8;
 
     default:
-        throw std::runtime_error("Invalid timer read address");
+        throw std::runtime_error("Invalid timer Read address");
     }
 }
 
-void Timer::write(uint16_t address, uint8_t value) {
+void Timer::Write(uint16_t address, uint8_t value) {
     switch (address) {
     case DIV: {
-        const bool oldSignal = timerSignal();
+        const bool oldSignal = TimerSignal();
 
         systemCounter_ = 0;
 
-        const bool newSignal = timerSignal();
+        const bool newSignal = TimerSignal();
 
         // Resetting DIV can create a timer falling edge.
         if (oldSignal && !newSignal) {
-            incrementTima();
+            IncrementTima();
         }
 
         break;
@@ -126,26 +128,26 @@ void Timer::write(uint16_t address, uint8_t value) {
         break;
 
     case TAC: {
-        const bool oldSignal = timerSignal();
+        const bool oldSignal = TimerSignal();
 
         tac_ = value & 0x07;
 
-        const bool newSignal = timerSignal();
+        const bool newSignal = TimerSignal();
 
         // Changing TAC can also create a falling edge.
         if (oldSignal && !newSignal) {
-            incrementTima();
+            IncrementTima();
         }
 
         break;
     }
 
     default:
-        throw std::runtime_error("Invalid timer write address");
+        throw std::runtime_error("Invalid timer Write address");
     }
 }
 
-bool Timer::consumeInterruptRequest() {
+bool Timer::ConsumeInterruptRequest() {
     if (!interruptRequested_) {
         return false;
     }
@@ -153,3 +155,5 @@ bool Timer::consumeInterruptRequest() {
     interruptRequested_ = false;
     return true;
 }
+
+} // namespace PixelLink::GameBoy

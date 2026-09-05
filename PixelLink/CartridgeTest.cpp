@@ -10,7 +10,9 @@
 #include "TestFramework.hpp"
 #include "TestSuites.hpp"
 
-namespace CartridgeTest {
+using namespace PixelLink::GameBoy;
+
+namespace PixelLink::Test::GameBoy::CartridgeTest {
 
 namespace {
 
@@ -122,85 +124,85 @@ void testCartridgeLoad() {
     TempRom rom("test_rom.gb");
 
     Cartridge cartridge;
-    cartridge.load(rom.path());
+    cartridge.Load(rom.path());
 
-    CHECK(cartridge.loaded());
-    CHECK(cartridge.size() == 32 * 1024);
+    CHECK(cartridge.Loaded());
+    CHECK(cartridge.Size() == 32 * 1024);
 
     CHECK(
-        cartridge.header().title
+        cartridge.Header().title
         == "TESTROM"
     );
 
     CHECK(
-        cartridge.header().type
+        cartridge.Header().type
         == 0x00
     );
 
     CHECK(
-        cartridge.header().romSizeCode
+        cartridge.Header().romSizeCode
         == 0x00
     );
 
     CHECK(
-        cartridge.header().ramSizeCode
+        cartridge.Header().ramSizeCode
         == 0x00
     );
 
     CHECK(
-        cartridge.header().declaredRomSize
+        cartridge.Header().declaredRomSize
         == 32 * 1024
     );
 
     CHECK(
-        cartridge.header().declaredRamSize
+        cartridge.Header().declaredRamSize
         == 0
     );
 
     CHECK(
-        cartridge.header().headerChecksumValid
+        cartridge.Header().headerChecksumValid
     );
 
-    CHECK(cartridge.read(0x0100) == 0x00);
-    CHECK(cartridge.read(0x0101) == 0xC3);
-    CHECK(cartridge.read(0x0150) == 0x3E);
-    CHECK(cartridge.read(0x0151) == 0x42);
+    CHECK(cartridge.Read(0x0100) == 0x00);
+    CHECK(cartridge.Read(0x0101) == 0xC3);
+    CHECK(cartridge.Read(0x0150) == 0x3E);
+    CHECK(cartridge.Read(0x0151) == 0x42);
 }
 
 void testBusCartridgeMapping() {
     TempRom rom("test_rom.gb");
 
     Cartridge cartridge;
-    cartridge.load(rom.path());
+    cartridge.Load(rom.path());
 
     Bus bus;
 
-    bus.write(
+    bus.Write(
         0xC000,
         0x55
     );
 
-    bus.insertCartridge(
+    bus.InsertCartridge(
         cartridge
     );
 
-    CHECK(bus.read(0x0150) == 0x3E);
-    CHECK(bus.read(0x0151) == 0x42);
-    CHECK(bus.read(0xC000) == 0x55);
+    CHECK(bus.Read(0x0150) == 0x3E);
+    CHECK(bus.Read(0x0151) == 0x42);
+    CHECK(bus.Read(0xC000) == 0x55);
 
-    bus.write(
+    bus.Write(
         0x0150,
         0xFF
     );
 
-    CHECK(bus.read(0x0150) == 0x3E);
+    CHECK(bus.Read(0x0150) == 0x3E);
 }
 
 } // namespace
 
 void run() {
     Test::run(
-        "Cartridge / load",
+        "Cartridge / Load",
         testCartridgeLoad
     );
 
@@ -210,4 +212,4 @@ void run() {
     );
 }
 
-} // namespace CartridgeTest
+} // namespace PixelLink::Test::CartridgeTest
