@@ -21,16 +21,22 @@
     <ClCompile Include="Main.cpp">
       <Filter>GB</Filter>
     </ClCompile>
-    <ClCompile Include="Bus_test.cpp">
+    <ClCompile Include="BusTest.cpp">
       <Filter>GB\Tests</Filter>
     </ClCompile>
-    <ClCompile Include="Cartridge_test.cpp">
+    <ClCompile Include="CartridgeTest.cpp">
       <Filter>GB\Tests</Filter>
     </ClCompile>
-    <ClCompile Include="CPU_test.cpp">
+    <ClCompile Include="CPUTest.cpp">
       <Filter>GB\Tests</Filter>
     </ClCompile>
-    <ClCompile Include="Interrupt_test.cpp">
+    <ClCompile Include="InterruptTest.cpp">
+      <Filter>GB\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="Timer.cpp">
+      <Filter>GB</Filter>
+    </ClCompile>
+    <ClCompile Include="TimerTest.cpp">
       <Filter>GB\Tests</Filter>
     </ClCompile>
   </ItemGroup>
@@ -53,8 +59,11 @@
     <ClInclude Include="TestUtils.hpp">
       <Filter>GB\Tests</Filter>
     </ClInclude>
+    <ClInclude Include="Timer.hpp">
+      <Filter>GB</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Project_plan.md" />
+    <None Include="ProjectPlan.md" />
   </ItemGroup>
 </Project>

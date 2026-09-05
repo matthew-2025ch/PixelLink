@@ -15,3 +15,7 @@ namespace CartridgeTest {
 namespace BusTest {
     void run();
 }
+
+namespace TimerTest {
+    void run();
+}

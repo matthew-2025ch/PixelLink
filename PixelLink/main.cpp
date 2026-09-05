@@ -13,6 +13,7 @@ int main() {
         InterruptTest::run();
         CartridgeTest::run();
         BusTest::run();
+        TimerTest::run();
     }
     catch (...) {
         std::cerr
