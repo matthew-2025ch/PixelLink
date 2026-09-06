@@ -15,16 +15,16 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # ------------------------------------------------------------
 
 add_library(PixelLinkGameBoy STATIC
-	Bus.cpp
-	Cartridge.cpp
-	CPU.cpp
-	GameBoy.cpp
-	Timer.cpp
+	src/GameBoy/Bus.cpp
+	src/GameBoy/Cartridge.cpp
+	src/GameBoy/CPU.cpp
+	src/GameBoy/GameBoy.cpp
+	src/GameBoy/Timer.cpp
 )
 
 target_include_directories(PixelLinkGameBoy
 	PUBLIC
-		${CMAKE_CURRENT_SOURCE_DIR}
+		${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 # ------------------------------------------------------------
@@ -32,7 +32,7 @@ target_include_directories(PixelLinkGameBoy
 # ------------------------------------------------------------
 
 add_executable(PixelLink
-    Main.cpp
+    src/Main.cpp
 )
 
 target_link_libraries(PixelLink
@@ -47,13 +47,13 @@ target_link_libraries(PixelLink
 enable_testing()
 
 add_executable(PixelLinkTests
-    TestMain.cpp
-    BusTest.cpp
-    CartridgeTest.cpp
-    CPUTest.cpp
-    InterruptTest.cpp
-    TimerIntegrationTest.cpp
-    TimerTest.cpp
+    tests/GameBoy/TestMain.cpp
+    tests/GameBoy/BusTest.cpp
+    tests/GameBoy/CartridgeTest.cpp
+    tests/GameBoy/CPUTest.cpp
+    tests/GameBoy/InterruptTest.cpp
+    tests/GameBoy/TimerIntegrationTest.cpp
+    tests/GameBoy/TimerTest.cpp
 )
 
 target_link_libraries(PixelLinkTests
