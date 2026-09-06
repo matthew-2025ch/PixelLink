@@ -1,7 +1,7 @@
 #include <cstdint>
 
 #include "Bus.hpp"
-#include "CPU.hpp"
+#include "GameBoy.hpp"
 #include "TestFramework.hpp"
 #include "TestSuites.hpp"
 #include "TestUtils.hpp"
@@ -39,9 +39,10 @@ void testBusTimerRegisterMapping() {
     CHECK(bus.Read(DIV) == 0x00);
 }
 
-void testCpuCyclesAdvanceTimer() {
-    Bus bus;
-    CPU cpu(bus);
+void testGameBoyCyclesAdvanceTimer() {
+    ::PixelLink::GameBoy::GameBoy gameBoy;
+
+    Bus& bus = gameBoy.GetBus();
 
     bus.Write(TIMA, 0x00);
     bus.Write(TAC, 0x05);
@@ -55,19 +56,21 @@ void testCpuCyclesAdvanceTimer() {
 
     CHECK(bus.Read(TIMA) == 0x00);
 
-    CHECK(cpu.Step() == 4);
-    CHECK(cpu.Step() == 4);
-    CHECK(cpu.Step() == 4);
+    CHECK(gameBoy.Step() == 4);
+    CHECK(gameBoy.Step() == 4);
+    CHECK(gameBoy.Step() == 4);
 
     CHECK(bus.Read(TIMA) == 0x00);
 
-    CHECK(cpu.Step() == 4);
+    CHECK(gameBoy.Step() == 4);
     CHECK(bus.Read(TIMA) == 0x01);
 }
 
 void testHaltStillAdvancesTimer() {
-    Bus bus;
-    CPU cpu(bus);
+    ::PixelLink::GameBoy::GameBoy gameBoy;
+
+    Bus& bus = gameBoy.GetBus();
+    CPU& cpu = gameBoy.GetCPU();
 
     bus.Write(TIMA, 0x00);
     bus.Write(TAC, 0x05);
@@ -76,13 +79,13 @@ void testHaltStillAdvancesTimer() {
         0x76 // HALT - 4 T-cycles
     });
 
-    CHECK(cpu.Step() == 4);
+    CHECK(gameBoy.Step() == 4);
     CHECK(cpu.halted);
 
-    // A halted CPU still consumes clock cycles.
-    CHECK(cpu.Step() == 4);
-    CHECK(cpu.Step() == 4);
-    CHECK(cpu.Step() == 4);
+    // HALT stops opcode execution, but hardware time still advances.
+    CHECK(gameBoy.Step() == 4);
+    CHECK(gameBoy.Step() == 4);
+    CHECK(gameBoy.Step() == 4);
 
     CHECK(bus.Read(TIMA) == 0x01);
 }
@@ -101,16 +104,18 @@ void testTimerRequestsInterruptThroughBus() {
     CHECK(bus.Read(TIMA) == 0x00);
     CHECK((bus.Read(IF) & TIMER_INTERRUPT) == 0);
 
-    // The reload and interrupt request happen 4 T-cycles later.
+    // Reload and interrupt request happen 4 T-cycles later.
     bus.Tick(4);
 
     CHECK(bus.Read(TIMA) == 0x42);
     CHECK((bus.Read(IF) & TIMER_INTERRUPT) != 0);
 }
 
-void testCpuServicesTimerInterrupt() {
-    Bus bus;
-    CPU cpu(bus);
+void testGameBoyServicesTimerInterrupt() {
+    ::PixelLink::GameBoy::GameBoy gameBoy;
+
+    Bus& bus = gameBoy.GetBus();
+    CPU& cpu = gameBoy.GetCPU();
 
     bus.Write(IF, 0x00);
     bus.Write(IE, TIMER_INTERRUPT);
@@ -127,21 +132,21 @@ void testCpuServicesTimerInterrupt() {
         0x00  // NOP -> reload + IF request at 20 T-cycles total
     });
 
-    CHECK(cpu.Step() == 4); // EI
-    CHECK(cpu.Step() == 4); // IME becomes enabled after this instruction
-    CHECK(cpu.Step() == 4);
-    CHECK(cpu.Step() == 4); // TIMA overflows
+    CHECK(gameBoy.Step() == 4); // EI
+    CHECK(gameBoy.Step() == 4); // IME enabled after this instruction
+    CHECK(gameBoy.Step() == 4);
+    CHECK(gameBoy.Step() == 4); // TIMA overflows
 
     CHECK(bus.Read(TIMA) == 0x00);
     CHECK((bus.Read(IF) & TIMER_INTERRUPT) == 0);
 
-    CHECK(cpu.Step() == 4); // TIMA reloads and requests interrupt
+    CHECK(gameBoy.Step() == 4); // TIMA reloads and requests interrupt
 
     CHECK(bus.Read(TIMA) == 0x42);
     CHECK((bus.Read(IF) & TIMER_INTERRUPT) != 0);
     CHECK(cpu.PC == 0x0105);
 
-    CHECK(cpu.Step() == 20); // Service Timer interrupt
+    CHECK(gameBoy.Step() == 20); // Service Timer interrupt
 
     CHECK(cpu.PC == 0x0050);
     CHECK(cpu.SP == 0xFFFC);
@@ -159,8 +164,8 @@ void run() {
     );
 
     Test::run(
-        "Timer integration / CPU cycles",
-        testCpuCyclesAdvanceTimer
+        "Timer integration / GameBoy cycles",
+        testGameBoyCyclesAdvanceTimer
     );
 
     Test::run(
@@ -174,8 +179,8 @@ void run() {
     );
 
     Test::run(
-        "Timer integration / CPU interrupt service",
-        testCpuServicesTimerInterrupt
+        "Timer integration / GameBoy interrupt service",
+        testGameBoyServicesTimerInterrupt
     );
 }
 

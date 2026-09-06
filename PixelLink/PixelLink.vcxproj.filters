@@ -43,6 +43,9 @@
     <ClCompile Include="TimerTest.cpp">
       <Filter>Test\GameBoy</Filter>
     </ClCompile>
+    <ClCompile Include="GameBoy.cpp">
+      <Filter>GameBoy</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Bus.hpp">
@@ -65,6 +68,9 @@
     </ClInclude>
     <ClInclude Include="TestUtils.hpp">
       <Filter>Test\GameBoy</Filter>
+    </ClInclude>
+    <ClInclude Include="GameBoy.hpp">
+      <Filter>GameBoy</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

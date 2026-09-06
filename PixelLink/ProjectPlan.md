@@ -33,8 +33,8 @@
    - [x] Timer interrupt
 
 6. Emulator Core
-   - [ ] GameBoy class
-   - [ ] Master cycle loop
+   - [x] GameBoy class
+   - [x] Master cycle loop
 
 7. PPU
    - [ ] PPU timing

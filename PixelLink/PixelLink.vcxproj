@@ -23,6 +23,7 @@
     <ClCompile Include="BusTest.cpp" />
     <ClCompile Include="CartridgeTest.cpp" />
     <ClCompile Include="CPUTest.cpp" />
+    <ClCompile Include="GameBoy.cpp" />
     <ClCompile Include="InterruptTest.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Cartridge.cpp" />
@@ -35,6 +36,7 @@
     <ClInclude Include="Bus.hpp" />
     <ClInclude Include="Cartridge.hpp" />
     <ClInclude Include="CPU.hpp" />
+    <ClInclude Include="GameBoy.hpp" />
     <ClInclude Include="TestFramework.hpp" />
     <ClInclude Include="TestSuites.hpp" />
     <ClInclude Include="TestUtils.hpp" />

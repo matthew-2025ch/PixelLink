@@ -23,11 +23,6 @@ auto CPU::Reset() -> void {
 }
 
 auto CPU::Step() -> int {
-    const auto finishStep = [this](int cycles) {
-        bus.Tick(static_cast<uint32_t>(cycles));
-        return cycles;
-        };
-
     const uint8_t pending =
         PendingInterrupts();
 
@@ -35,22 +30,19 @@ auto CPU::Step() -> int {
         halted = false;
 
         if (ime) {
-            return finishStep(
-                ServiceInterrupt(pending)
-            );
+            return ServiceInterrupt(pending);
         }
     }
 
     if (halted) {
-        return finishStep(4);
+        return 4;
     }
 
-    const int cycles =
-        Execute(Fetch8());
+    const int cycles = Execute(Fetch8());
 
     UpdateIME();
 
-    return finishStep(cycles);
+    return cycles;
 }
 
 auto CPU::Fetch8() -> uint8_t {
