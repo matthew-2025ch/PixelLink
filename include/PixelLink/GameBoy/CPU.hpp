@@ -3,7 +3,8 @@
 #include <cstdint>
 #include <stdexcept>
 #include <format>
-#include "Bus.hpp"
+
+#include <PixelLink/GameBoy/PPU.hpp>
 
 namespace PixelLink::GameBoy {
 

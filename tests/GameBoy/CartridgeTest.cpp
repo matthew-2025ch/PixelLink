@@ -5,10 +5,10 @@
 #include <utility>
 #include <vector>
 
-#include "Bus.hpp"
-#include "Cartridge.hpp"
-#include "TestFramework.hpp"
-#include "TestSuites.hpp"
+#include <PixelLink/GameBoy/Bus.hpp>
+#include <PixelLink/GameBoy/Cartridge.hpp>
+#include <PixelLink/Test/TestFramework.hpp>
+#include <PixelLink/Test/TestSuites.hpp>
 
 using namespace PixelLink::GameBoy;
 

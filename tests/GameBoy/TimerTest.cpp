@@ -1,8 +1,8 @@
 #include <cstdint>
 
-#include "TestFramework.hpp"
-#include "TestSuites.hpp"
-#include "Timer.hpp"
+#include <PixelLink/GameBoy/Timer.hpp>
+#include <PixelLink/Test/TestFramework.hpp>
+#include <PixelLink/Test/TestSuites.hpp>
 
 using namespace PixelLink::GameBoy;
 

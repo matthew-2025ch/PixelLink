@@ -1,4 +1,4 @@
-#include "GameBoy.hpp"
+#include <PixelLink/GameBoy/GameBoy.hpp>
 
 namespace PixelLink::GameBoy {
 

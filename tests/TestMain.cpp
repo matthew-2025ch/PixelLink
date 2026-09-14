@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "TestSuites.hpp"
+#include <PixelLink/Test/TestSuites.hpp>
 
 int main() {
     try {
@@ -15,6 +15,7 @@ int main() {
         PixelLink::Test::GameBoy::BusTest::run();
         PixelLink::Test::GameBoy::TimerTest::run();
         PixelLink::Test::GameBoy::TimerIntegrationTest::run();
+        PixelLink::Test::GameBoy::PPUTest::run();
     }
     catch (...) {
         std::cerr

@@ -26,6 +26,10 @@ namespace GameBoy{
     namespace TimerIntegrationTest {
         void run();
     }
+
+    namespace PPUTest {
+        void run();
+    }
 } // namespace GameBoy
 
 } // namespace PixelLink::Test

@@ -1,0 +1,35 @@
+include/
+	PixelLink/
+		GameBoy/
+			Bus.hpp
+			Cartridge.hpp
+			CPU.hpp
+			GameBoy.hpp
+			PPU.hpp
+			Timer.hpp
+		Test/
+			TestFramework.hpp
+			TestSuites.hpp
+			TestUtils.hpp
+src/
+	GameBoy/
+		Bus.cpp
+		Cartridge.cpp
+		CPU.cpp
+		GameBoy.cpp
+		PPU.cpp
+		Timer.cpp
+	Main.cpp
+tests/
+	GameBoy/
+		BusTest.cpp
+		CartridgeTest.cpp
+		CPUTest.cpp
+		InterruptTest.cpp
+		PPUTest.cpp
+		TestMain.cpp
+		TimerIntegrationTest.cpp
+		TimerTest.cpp
+CMakeLists.txt
+ProjectPlan.md
+ProjectStructure.txt

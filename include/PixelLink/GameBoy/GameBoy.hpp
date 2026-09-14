@@ -2,9 +2,9 @@
 
 #include <filesystem>
 
-#include "Bus.hpp"
-#include "CPU.hpp"
-#include "Cartridge.hpp"
+#include <PixelLink/GameBoy/Bus.hpp>
+#include <PixelLink/GameBoy/CPU.hpp>
+#include <PixelLink/GameBoy/Cartridge.hpp>
 
 namespace PixelLink::GameBoy {
 

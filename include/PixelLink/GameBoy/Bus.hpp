@@ -2,8 +2,9 @@
 
 #include <array>
 #include <cstdint>
-#include "Cartridge.hpp"
-#include "Timer.hpp"
+
+#include <PixelLink/GameBoy/Cartridge.hpp>
+#include <PixelLink/GameBoy/Timer.hpp>
 
 namespace PixelLink::GameBoy {
 

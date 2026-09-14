@@ -18,6 +18,7 @@ add_library(PixelLinkGameBoy STATIC
 	src/GameBoy/Bus.cpp
 	src/GameBoy/Cartridge.cpp
 	src/GameBoy/CPU.cpp
+    src/GameBoy/PPU.cpp
 	src/GameBoy/GameBoy.cpp
 	src/GameBoy/Timer.cpp
 )
@@ -35,6 +36,7 @@ add_executable(PixelLink
     src/Main.cpp
 )
 
+
 target_link_libraries(PixelLink
     PRIVATE
         PixelLinkGameBoy
@@ -47,10 +49,11 @@ target_link_libraries(PixelLink
 enable_testing()
 
 add_executable(PixelLinkTests
-    tests/GameBoy/TestMain.cpp
+    tests/TestMain.cpp
     tests/GameBoy/BusTest.cpp
     tests/GameBoy/CartridgeTest.cpp
     tests/GameBoy/CPUTest.cpp
+    tests/GameBoy/PPUTest.cpp
     tests/GameBoy/InterruptTest.cpp
     tests/GameBoy/TimerIntegrationTest.cpp
     tests/GameBoy/TimerTest.cpp

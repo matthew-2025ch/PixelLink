@@ -1,8 +1,8 @@
 #include <cstdint>
 
-#include "Bus.hpp"
-#include "TestFramework.hpp"
-#include "TestSuites.hpp"
+#include <PixelLink/GameBoy/Bus.hpp>
+#include <PixelLink/Test/TestFramework.hpp>
+#include <PixelLink/Test/TestSuites.hpp>
 
 using namespace PixelLink::GameBoy;
 

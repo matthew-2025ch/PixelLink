@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <initializer_list>
 
-#include "Bus.hpp"
+#include <PixelLink/GameBoy/Bus.hpp>
 
 using namespace PixelLink::GameBoy;
 

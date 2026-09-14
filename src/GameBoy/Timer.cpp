@@ -1,6 +1,6 @@
-#include "Timer.hpp"
-
 #include <stdexcept>
+
+#include <PixelLink/GameBoy/Timer.hpp>
 
 namespace PixelLink::GameBoy {
 

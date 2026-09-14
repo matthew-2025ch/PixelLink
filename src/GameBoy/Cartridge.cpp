@@ -1,9 +1,9 @@
-#include "Cartridge.hpp"
-
 #include <format>
 #include <fstream>
 #include <ostream>
 #include <stdexcept>
+
+#include <PixelLink/GameBoy/Cartridge.hpp>
 
 namespace PixelLink::GameBoy {
 
