@@ -1,6 +1,7 @@
 #include <cstdint>
 
 #include <PixelLink/GameBoy/Bus.hpp>
+#include <PixelLink/GameBoy/PPU.hpp>
 #include <PixelLink/Test/TestFramework.hpp>
 #include <PixelLink/Test/TestSuites.hpp>
 
@@ -134,6 +135,159 @@ void testRegionIsolation() {
     CHECK(bus.Read(0xFFFF) == 0x55);
 }
 
+
+void testPPUAccessRestrictions() {
+    Bus bus;
+
+    // LCD on.
+    bus.Write(0xFF40, 0x80);
+
+    // Preload data before the PPU starts restricting CPU access.
+    bus.Write(0x8000, 0x12);
+    bus.Write(0xFE00, 0x34);
+
+    PPU ppu(bus);
+
+    // Mode 2: CPU can access VRAM but not OAM.
+    CHECK(ppu.GetMode() == PPU::Mode::OAMScan);
+    CHECK(bus.Read(0x8000) == 0x12);
+    CHECK(bus.Read(0xFE00) == 0xFF);
+
+    bus.Write(0xFE00, 0x99);
+
+    CHECK(
+        bus.Read(0xFE00, BusAccess::PPU) ==
+        0x34
+    );
+
+    // Mode 3: CPU cannot access VRAM or OAM.
+    ppu.Step(80);
+
+    CHECK(ppu.GetMode() == PPU::Mode::Drawing);
+    CHECK(bus.Read(0x8000) == 0xFF);
+    CHECK(bus.Read(0xFE00) == 0xFF);
+
+    bus.Write(0x8000, 0x99);
+
+    CHECK(
+        bus.Read(0x8000, BusAccess::PPU) ==
+        0x12
+    );
+
+    // Mode 0: both become accessible again.
+    ppu.Step(172);
+
+    CHECK(ppu.GetMode() == PPU::Mode::HBlank);
+    CHECK(bus.Read(0x8000) == 0x12);
+    CHECK(bus.Read(0xFE00) == 0x34);
+}
+
+void testOAMDMATransfer() {
+    Bus bus;
+
+    for (std::uint16_t i = 0; i < 0x00A0; ++i) {
+        bus.Write(
+            static_cast<std::uint16_t>(0xC000 + i),
+            static_cast<std::uint8_t>(i ^ 0x5A)
+        );
+    }
+
+    bus.Write(0xFF46, 0xC0);
+
+    CHECK(bus.IsOAMDMAActive());
+    CHECK(bus.GetOAMDMABytesTransferred() == 0);
+
+    bus.Tick(4);
+
+    CHECK(bus.IsOAMDMAActive());
+    CHECK(bus.GetOAMDMABytesTransferred() == 1);
+
+    CHECK(
+        bus.Read(0xFE00, BusAccess::DMA) ==
+        static_cast<std::uint8_t>(0x00 ^ 0x5A)
+    );
+
+    bus.Tick(636);
+
+    CHECK(!bus.IsOAMDMAActive());
+    CHECK(bus.GetOAMDMABytesTransferred() == 0x00A0);
+
+    for (std::uint16_t i = 0; i < 0x00A0; ++i) {
+        CHECK(
+            bus.Read(
+                static_cast<std::uint16_t>(0xFE00 + i)
+            ) ==
+            static_cast<std::uint8_t>(i ^ 0x5A)
+        );
+    }
+}
+
+void testOAMDMACPUTimingRestriction() {
+    Bus bus;
+
+    bus.Write(0xC000, 0x12);
+    bus.Write(0xFF80, 0x34);
+
+    bus.Write(0xFF46, 0xC0);
+
+    CHECK(bus.IsOAMDMAActive());
+
+    // During DMG OAM DMA, the CPU can access HRAM only.
+    CHECK(bus.Read(0xC000) == 0xFF);
+    CHECK(bus.Read(0xFF80) == 0x34);
+
+    bus.Write(0xC000, 0x99);
+    bus.Write(0xFF80, 0x56);
+
+    CHECK(bus.Read(0xFF80) == 0x56);
+
+    bus.Tick(640);
+
+    CHECK(!bus.IsOAMDMAActive());
+
+    // The blocked WRAM write must not have happened.
+    CHECK(bus.Read(0xC000) == 0x12);
+}
+
+void testOAMDMARestart() {
+    Bus bus;
+
+    for (std::uint16_t i = 0; i < 0x00A0; ++i) {
+        bus.Write(
+            static_cast<std::uint16_t>(0xC000 + i),
+            0x11
+        );
+
+        bus.Write(
+            static_cast<std::uint16_t>(0xD000 + i),
+            0x22
+        );
+    }
+
+    bus.Write(0xFF46, 0xC0);
+    bus.Tick(40);
+
+    CHECK(bus.GetOAMDMABytesTransferred() == 10);
+
+    // FF46 remains writable so an active transfer can restart.
+    bus.Write(0xFF46, 0xD0);
+
+    CHECK(bus.IsOAMDMAActive());
+    CHECK(bus.GetOAMDMABytesTransferred() == 0);
+
+    bus.Tick(640);
+
+    CHECK(!bus.IsOAMDMAActive());
+
+    for (std::uint16_t i = 0; i < 0x00A0; ++i) {
+        CHECK(
+            bus.Read(
+                static_cast<std::uint16_t>(0xFE00 + i)
+            ) == 0x22
+        );
+    }
+}
+
 } // namespace
 
 void run() {
@@ -147,6 +301,16 @@ void run() {
     Test::run("Bus / HRAM", testHRAM);
     Test::run("Bus / IE", testIE);
     Test::run("Bus / region isolation", testRegionIsolation);
+    Test::run(
+        "Bus / PPU VRAM-OAM restrictions",
+        testPPUAccessRestrictions
+    );
+    Test::run("DMA / OAM transfer", testOAMDMATransfer);
+    Test::run(
+        "DMA / CPU HRAM-only restriction",
+        testOAMDMACPUTimingRestriction
+    );
+    Test::run("DMA / restart", testOAMDMARestart);
 }
 
-} // namespace PixelLink::Test::BusTest
+} // namespace PixelLink::Test::GameBoy::BusTest

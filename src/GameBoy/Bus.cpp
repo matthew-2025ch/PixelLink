@@ -1,5 +1,8 @@
 #include <PixelLink/GameBoy/Bus.hpp>
 
+#include <PixelLink/GameBoy/Cartridge.hpp>
+#include <PixelLink/GameBoy/PPU.hpp>
+
 namespace PixelLink::GameBoy {
 
 Bus::Bus(Cartridge& cartridge)
@@ -16,7 +19,30 @@ auto Bus::RemoveCartridge() noexcept -> void {
     cartridge_ = nullptr;
 }
 
-auto Bus::Read(uint16_t address) const -> uint8_t {
+auto Bus::AttachPPU(PPU& ppu) noexcept -> void {
+    ppu_ = &ppu;
+}
+
+auto Bus::DetachPPU(const PPU& ppu) noexcept -> void {
+    if (ppu_ == &ppu) {
+        ppu_ = nullptr;
+    }
+}
+
+auto Bus::Read(
+    const std::uint16_t address,
+    const BusAccess access
+) const -> std::uint8_t {
+    if (access == BusAccess::CPU) {
+        if (IsCPUAccessBlockedByDMA(address)) {
+            return 0xFF;
+        }
+
+        if (IsCPUAccessBlockedByPPU(address)) {
+            return 0xFF;
+        }
+    }
+
     // Cartridge ROM
     if (address <= 0x7FFF) {
         if (cartridge_ != nullptr) {
@@ -52,7 +78,7 @@ auto Bus::Read(uint16_t address) const -> uint8_t {
 
     // OAM
     if (address <= 0xFE9F) {
-        return oam_[address - 0xFE00];
+        return oam_[address - OAM_BASE];
     }
 
     // Unusable memory
@@ -80,15 +106,34 @@ auto Bus::Read(uint16_t address) const -> uint8_t {
 }
 
 auto Bus::Write(
-    uint16_t address,
-    uint8_t value
+    const std::uint16_t address,
+    const std::uint8_t value,
+    const BusAccess access
 ) -> void {
+    // Writing FF46 from the CPU starts or restarts OAM DMA.
+    // This remains possible while a DMA transfer is already active.
+    if (address == DMA_REGISTER &&
+        access == BusAccess::CPU) {
+        io_[DMA_REGISTER - 0xFF00] = value;
+        StartOAMDMA(value);
+        return;
+    }
+
+    if (access == BusAccess::CPU) {
+        if (IsCPUAccessBlockedByDMA(address)) {
+            return;
+        }
+
+        if (IsCPUAccessBlockedByPPU(address)) {
+            return;
+        }
+    }
+
     // Cartridge ROM / MBC control
     if (address <= 0x7FFF) {
         if (cartridge_ != nullptr) {
             cartridge_->Write(address, value);
-        }
-        else {
+        } else {
             testRom_[address] = value;
         }
 
@@ -124,7 +169,7 @@ auto Bus::Write(
 
     // OAM
     if (address <= 0xFE9F) {
-        oam_[address - 0xFE00] = value;
+        oam_[address - OAM_BASE] = value;
         return;
     }
 
@@ -155,12 +200,130 @@ auto Bus::Write(
     ie_ = value;
 }
 
-auto Bus::Tick(uint32_t tCycles)->void {
-	timer_.Tick(tCycles);
+auto Bus::Tick(const std::uint32_t tCycles) -> void {
+    timer_.Tick(tCycles);
+
     if (timer_.ConsumeInterruptRequest()) {
-        constexpr uint16_t IF = 0xFF0F;
-        constexpr uint8_t TIMER_INTERRUPT = 1u << 2;
-        Write(IF, static_cast<uint8_t>(Read(IF) | TIMER_INTERRUPT));
+        constexpr std::uint16_t IF = 0xFF0F;
+        constexpr std::uint8_t TIMER_INTERRUPT = 1u << 2;
+
+        Write(
+            IF,
+            static_cast<std::uint8_t>(
+                Read(IF, BusAccess::Internal) |
+                TIMER_INTERRUPT
+            ),
+            BusAccess::Internal
+        );
+    }
+
+    TickOAMDMA(tCycles);
+}
+
+auto Bus::IsOAMDMAActive() const noexcept -> bool {
+    return oamDMAActive_;
+}
+
+auto Bus::GetOAMDMABytesTransferred() const noexcept
+    -> std::size_t {
+    return oamDMAByteIndex_;
+}
+
+auto Bus::IsHRAMAddress(
+    const std::uint16_t address
+) noexcept -> bool {
+    return 0xFF80 <= address && address <= 0xFFFE;
+}
+
+auto Bus::IsCPUAccessBlockedByDMA(
+    const std::uint16_t address
+) const noexcept -> bool {
+    if (!oamDMAActive_) {
+        return false;
+    }
+
+    // DMG behavior: while OAM DMA is active, CPU accesses are
+    // restricted to HRAM. FF46 writes are handled before this check
+    // so that an active transfer can be restarted.
+    return !IsHRAMAddress(address);
+}
+
+auto Bus::IsCPUAccessBlockedByPPU(
+    const std::uint16_t address
+) const noexcept -> bool {
+    if (ppu_ == nullptr) {
+        return false;
+    }
+
+    if (0x8000 <= address && address <= 0x9FFF) {
+        return !ppu_->CanCPUAccessVRAM();
+    }
+
+    if (0xFE00 <= address && address <= 0xFE9F) {
+        return !ppu_->CanCPUAccessOAM();
+    }
+
+    return false;
+}
+
+auto Bus::StartOAMDMA(
+    const std::uint8_t sourceHigh
+) -> void {
+    oamDMAActive_ = true;
+    oamDMASourceBase_ =
+        static_cast<std::uint16_t>(sourceHigh) << 8u;
+    oamDMAByteIndex_ = 0;
+    oamDMATCycleAccumulator_ = 0;
+}
+
+auto Bus::TickOAMDMA(
+    const std::uint32_t tCycles
+) -> void {
+    if (!oamDMAActive_) {
+        return;
+    }
+
+    oamDMATCycleAccumulator_ += tCycles;
+
+    while (
+        oamDMAActive_ &&
+        oamDMATCycleAccumulator_ >=
+            OAM_DMA_T_CYCLES_PER_BYTE
+    ) {
+        oamDMATCycleAccumulator_ -=
+            OAM_DMA_T_CYCLES_PER_BYTE;
+
+        const std::uint16_t sourceAddress =
+            static_cast<std::uint16_t>(
+                oamDMASourceBase_ +
+                static_cast<std::uint16_t>(
+                    oamDMAByteIndex_
+                )
+            );
+
+        const std::uint16_t destinationAddress =
+            static_cast<std::uint16_t>(
+                OAM_BASE +
+                static_cast<std::uint16_t>(
+                    oamDMAByteIndex_
+                )
+            );
+
+        const std::uint8_t value =
+            Read(sourceAddress, BusAccess::DMA);
+
+        Write(
+            destinationAddress,
+            value,
+            BusAccess::DMA
+        );
+
+        ++oamDMAByteIndex_;
+
+        if (oamDMAByteIndex_ >= OAM_DMA_BYTES) {
+            oamDMAActive_ = false;
+            oamDMATCycleAccumulator_ = 0;
+        }
     }
 }
 

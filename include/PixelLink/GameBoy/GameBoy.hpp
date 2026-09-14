@@ -5,6 +5,7 @@
 #include <PixelLink/GameBoy/Bus.hpp>
 #include <PixelLink/GameBoy/CPU.hpp>
 #include <PixelLink/GameBoy/Cartridge.hpp>
+#include <PixelLink/GameBoy/PPU.hpp>
 
 namespace PixelLink::GameBoy {
 
@@ -25,9 +26,13 @@ public:
     [[nodiscard]] auto GetCartridge() const noexcept
         -> const Cartridge&;
 
+    [[nodiscard]] auto GetPPU() noexcept -> PPU&;
+    [[nodiscard]] auto GetPPU() const noexcept -> const PPU&;
+
 private:
     Cartridge cartridge_;
     Bus bus_;
+    PPU ppu_;
     CPU cpu_;
 };
 

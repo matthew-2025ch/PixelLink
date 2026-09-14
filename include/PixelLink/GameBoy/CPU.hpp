@@ -4,9 +4,9 @@
 #include <stdexcept>
 #include <format>
 
-#include <PixelLink/GameBoy/PPU.hpp>
-
 namespace PixelLink::GameBoy {
+
+class Bus;
 
 class CPU {
 public:

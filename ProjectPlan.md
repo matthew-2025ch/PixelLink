@@ -48,29 +48,39 @@
      - [x] STAT mode bits
      - [x] LY / LYC coincidence flag
    - Part 2: Background
-     - [ ] Tile data decoding
-     - [ ] Tile maps
-     - [ ] SCX / SCY scrolling
-     - [ ] BGP palette
-     - [ ] Framebuffer
+     - [x] Tile data decoding
+     - [x] Tile maps
+     - [x] SCX / SCY scrolling
+     - [x] BGP palette
+     - [x] Framebuffer
    - Part 3: Window
-     - [ ] Window tile map
-     - [ ] WX / WY positioning
+     - [x] Window tile map
+     - [x] WX / WY positioning
    - Part 4: Sprites
-     - [ ] OAM scan
-     - [ ] 10 sprites per scanline
-     - [ ] 8x8 / 8x16 sprites
-     - [ ] X / Y flip
-     - [ ] OBP0 / OBP1
-     - [ ] Sprite priority
+     - [x] OAM scan
+     - [x] 10 sprites per scanline
+     - [x] 8x8 / 8x16 sprites
+     - [x] X / Y flip
+     - [x] OBP0 / OBP1
+     - [x] Sprite priority
    - Part 5: PPU accuracy
-     - [ ] STAT interrupts
-     - [ ] VRAM / OAM access restrictions
-     - [ ] Variable mode 3 timing
-     - [ ] Pixel FIFO / fetcher if needed
+     - [x] STAT interrupts
+     - [x] VRAM / OAM access rules
+     - [x] Bus-side CPU VRAM / OAM access enforcement
+     - [x] Variable mode 3 timing
+     - [x] Pixel FIFO / fetcher if needed
 
 8. DMA
-   - [ ] OAM DMA (FF46)
+   - Part 1: Bus access model
+     - [x] Distinguish CPU / PPU / DMA bus access
+     - [x] Enforce CPU VRAM / OAM restrictions through Bus
+   - Part 2: OAM DMA (FF46)
+     - [x] FF46 register / DMA start
+     - [x] Copy 160 bytes to OAM
+     - [x] DMA transfer timing
+     - [x] CPU bus restrictions during DMA
+     - [x] DMA restart behavior
+     - [x] DMA tests
 
 9. SDL
    - [ ] Window
