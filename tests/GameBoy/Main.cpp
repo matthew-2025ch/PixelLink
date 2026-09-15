@@ -6,16 +6,17 @@ int main() {
     try {
         std::cout
             << "==============================\n"
-            << " Game Boy Emulator Tests\n"
+            << " Game Boy Core Tests\n"
             << "==============================\n\n";
 
+        PixelLink::Test::GameBoy::BusTest::run();
+        PixelLink::Test::GameBoy::CartridgeTest::run();
         PixelLink::Test::GameBoy::CPUTest::run();
         PixelLink::Test::GameBoy::InterruptTest::run();
-        PixelLink::Test::GameBoy::CartridgeTest::run();
-        PixelLink::Test::GameBoy::BusTest::run();
-        PixelLink::Test::GameBoy::TimerTest::run();
-        PixelLink::Test::GameBoy::TimerIntegrationTest::run();
+        PixelLink::Test::GameBoy::JoypadTest::run();
         PixelLink::Test::GameBoy::PPUTest::run();
+        PixelLink::Test::GameBoy::TimerIntegrationTest::run();
+        PixelLink::Test::GameBoy::TimerTest::run();
     }
     catch (...) {
         std::cerr

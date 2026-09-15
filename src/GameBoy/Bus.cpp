@@ -1,7 +1,8 @@
 #include <PixelLink/GameBoy/Bus.hpp>
-
 #include <PixelLink/GameBoy/Cartridge.hpp>
+#include <PixelLink/GameBoy/Joypad.hpp>
 #include <PixelLink/GameBoy/PPU.hpp>
+#include <PixelLink/GameBoy/Timer.hpp>
 
 namespace PixelLink::GameBoy {
 
@@ -26,6 +27,26 @@ auto Bus::AttachPPU(PPU& ppu) noexcept -> void {
 auto Bus::DetachPPU(const PPU& ppu) noexcept -> void {
     if (ppu_ == &ppu) {
         ppu_ = nullptr;
+    }
+}
+
+auto Bus::AttachTimer(Timer& timer) noexcept -> void {
+    timer_ = &timer;
+}
+
+auto Bus::DetachTimer(const Timer& timer) noexcept -> void {
+    if (timer_ == &timer) {
+        timer_ = nullptr;
+    }
+}
+
+auto Bus::AttachJoypad(Joypad& joypad) noexcept -> void {
+    joypad_ = &joypad;
+}
+
+auto Bus::DetachJoypad(const Joypad& joypad) noexcept -> void {
+    if (joypad_ == &joypad) {
+        joypad_ = nullptr;
     }
 }
 
@@ -86,9 +107,22 @@ auto Bus::Read(
         return 0xFF;
     }
 
+    // Joypad register
+    if (address == JOYP_REGISTER) {
+        if (joypad_ != nullptr) {
+            return joypad_->Read();
+        }
+
+        return 0xFF;
+    }
+
     // Timer registers
     if (0xFF04 <= address && address <= 0xFF07) {
-        return timer_.Read(address);
+        if (timer_ != nullptr) {
+            return timer_->Read(address);
+        }
+
+        return 0xFF;
     }
 
     // I/O registers
@@ -178,9 +212,22 @@ auto Bus::Write(
         return;
     }
 
-    // Timer registers mapping
+    // Joypad register
+    if (address == JOYP_REGISTER) {
+        if (joypad_ != nullptr &&
+            joypad_->Write(value)) {
+            RequestInterrupt(JOYPAD_INTERRUPT);
+        }
+
+        return;
+    }
+
+    // Timer registers
     if (0xFF04 <= address && address <= 0xFF07) {
-        timer_.Write(address, value);
+        if (timer_ != nullptr) {
+            timer_->Write(address, value);
+        }
+
         return;
     }
 
@@ -201,23 +248,19 @@ auto Bus::Write(
 }
 
 auto Bus::Tick(const std::uint32_t tCycles) -> void {
-    timer_.Tick(tCycles);
-
-    if (timer_.ConsumeInterruptRequest()) {
-        constexpr std::uint16_t IF = 0xFF0F;
-        constexpr std::uint8_t TIMER_INTERRUPT = 1u << 2;
-
-        Write(
-            IF,
-            static_cast<std::uint8_t>(
-                Read(IF, BusAccess::Internal) |
-                TIMER_INTERRUPT
-            ),
-            BusAccess::Internal
-        );
-    }
-
     TickOAMDMA(tCycles);
+}
+
+auto Bus::RequestInterrupt(
+    const std::uint8_t mask
+) -> void {
+    Write(
+        IF_REGISTER,
+        static_cast<std::uint8_t>(
+            Read(IF_REGISTER, BusAccess::Internal) | mask
+        ),
+        BusAccess::Internal
+    );
 }
 
 auto Bus::IsOAMDMAActive() const noexcept -> bool {

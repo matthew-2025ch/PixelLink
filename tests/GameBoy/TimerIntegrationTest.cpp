@@ -2,6 +2,7 @@
 
 #include <PixelLink/GameBoy/Bus.hpp>
 #include <PixelLink/GameBoy/GameBoy.hpp>
+#include <PixelLink/GameBoy/Timer.hpp>
 #include <PixelLink/Test/TestFramework.hpp>
 #include <PixelLink/Test/TestUtils.hpp>
 
@@ -21,7 +22,10 @@ constexpr uint16_t IE   = 0xFFFF;
 constexpr uint8_t TIMER_INTERRUPT = 1u << 2;
 
 void testBusTimerRegisterMapping() {
+    Timer timer;
     Bus bus;
+
+    bus.AttachTimer(timer);
 
     bus.Write(TIMA, 0x12);
     bus.Write(TMA, 0x34);
@@ -31,11 +35,16 @@ void testBusTimerRegisterMapping() {
     CHECK(bus.Read(TMA) == 0x34);
     CHECK(bus.Read(TAC) == 0xFD);
 
-    bus.Tick(256);
+    // GameBoy owns and advances Timer. In this mapping-only test,
+    // advance the Timer directly.
+    timer.Tick(256);
     CHECK(bus.Read(DIV) == 0x01);
 
     bus.Write(DIV, 0xAB);
     CHECK(bus.Read(DIV) == 0x00);
+
+    bus.DetachTimer(timer);
+    CHECK(bus.Read(TIMA) == 0xFF);
 }
 
 void testGameBoyCyclesAdvanceTimer() {
@@ -89,22 +98,33 @@ void testHaltStillAdvancesTimer() {
     CHECK(bus.Read(TIMA) == 0x01);
 }
 
-void testTimerRequestsInterruptThroughBus() {
-    Bus bus;
+void testGameBoyPropagatesTimerInterrupt() {
+    ::PixelLink::GameBoy::GameBoy gameBoy;
+
+    Bus& bus = gameBoy.GetBus();
 
     bus.Write(IF, 0x00);
     bus.Write(TMA, 0x42);
     bus.Write(TIMA, 0xFF);
     bus.Write(TAC, 0x05);
 
-    // 16 T-cycles produce the TIMA overflow.
-    bus.Tick(16);
+    Test::Load(bus, 0x0100, {
+        0x00, // 4 T-cycles
+        0x00, // 8
+        0x00, // 12
+        0x00, // 16 -> TIMA overflow
+        0x00  // 20 -> reload + interrupt request
+    });
+
+    CHECK(gameBoy.Step() == 4);
+    CHECK(gameBoy.Step() == 4);
+    CHECK(gameBoy.Step() == 4);
+    CHECK(gameBoy.Step() == 4);
 
     CHECK(bus.Read(TIMA) == 0x00);
     CHECK((bus.Read(IF) & TIMER_INTERRUPT) == 0);
 
-    // Reload and interrupt request happen 4 T-cycles later.
-    bus.Tick(4);
+    CHECK(gameBoy.Step() == 4);
 
     CHECK(bus.Read(TIMA) == 0x42);
     CHECK((bus.Read(IF) & TIMER_INTERRUPT) != 0);
@@ -173,8 +193,8 @@ void run() {
     );
 
     Test::run(
-        "Timer integration / interrupt request",
-        testTimerRequestsInterruptThroughBus
+        "Timer integration / GameBoy interrupt request",
+        testGameBoyPropagatesTimerInterrupt
     );
 
     Test::run(

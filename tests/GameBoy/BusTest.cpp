@@ -1,7 +1,9 @@
 #include <cstdint>
 
 #include <PixelLink/GameBoy/Bus.hpp>
+#include <PixelLink/GameBoy/Joypad.hpp>
 #include <PixelLink/GameBoy/PPU.hpp>
+#include <PixelLink/GameBoy/Timer.hpp>
 #include <PixelLink/Test/TestFramework.hpp>
 #include <PixelLink/Test/TestSuites.hpp>
 
@@ -88,13 +90,39 @@ void testUnusableMemory() {
 void testIO() {
     Bus bus;
 
-    bus.Write(0xFF00, 0x12);
+    // FF00 and FF04-FF07 are device-mapped registers, so use
+    // ordinary I/O addresses for the generic I/O storage test.
+    bus.Write(0xFF10, 0x12);
     bus.Write(0xFF0F, 0x1F);
     bus.Write(0xFF7F, 0x34);
 
-    CHECK(bus.Read(0xFF00) == 0x12);
+    CHECK(bus.Read(0xFF10) == 0x12);
     CHECK(bus.Read(0xFF0F) == 0x1F);
     CHECK(bus.Read(0xFF7F) == 0x34);
+}
+
+void testDeviceAttachments() {
+    Bus bus;
+    Timer timer;
+    Joypad joypad;
+
+    // Detached device ranges read as open bus/high.
+    CHECK(bus.Read(0xFF00) == 0xFF);
+    CHECK(bus.Read(0xFF04) == 0xFF);
+
+    bus.AttachTimer(timer);
+    bus.Write(0xFF05, 0x42);
+    CHECK(bus.Read(0xFF05) == 0x42);
+
+    bus.AttachJoypad(joypad);
+    bus.Write(0xFF00, 0x20);
+    CHECK(bus.Read(0xFF00) == 0xEF);
+
+    bus.DetachTimer(timer);
+    bus.DetachJoypad(joypad);
+
+    CHECK(bus.Read(0xFF00) == 0xFF);
+    CHECK(bus.Read(0xFF04) == 0xFF);
 }
 
 void testHRAM() {
@@ -298,6 +326,7 @@ void run() {
     Test::run("Bus / OAM", testOAM);
     Test::run("Bus / unusable memory", testUnusableMemory);
     Test::run("Bus / I/O", testIO);
+    Test::run("Bus / device attachments", testDeviceAttachments);
     Test::run("Bus / HRAM", testHRAM);
     Test::run("Bus / IE", testIE);
     Test::run("Bus / region isolation", testRegionIsolation);

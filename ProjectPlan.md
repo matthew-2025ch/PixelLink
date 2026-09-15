@@ -1,5 +1,7 @@
 ## Stage 1: Game Boy Emulator
 
+**Current milestone:** The emulator core is connected to SDL3, can boot ROM ONLY cartridges, display the rendered Game Boy framebuffer, and accept keyboard input through the emulated Joypad. The SDL3 frontend integration test is running successfully. The next major work is cartridge controller support and broader emulator accuracy.
+
 1. CPU
    - [x] Registers / Opcodes
    - [x] CB Opcodes
@@ -38,6 +40,8 @@
 6. Emulator Core
    - [x] GameBoy class
    - [x] Master cycle loop
+   - [x] GameBoy owns Timer and Joypad
+   - [x] Bus maps hardware devices without owning them
 
 7. PPU
    - Part 1: Timing and state
@@ -82,15 +86,23 @@
      - [x] DMA restart behavior
      - [x] DMA tests
 
-9. SDL
-   - [ ] Window
-   - [ ] Renderer
-   - [ ] Display framebuffer
+9. SDL3 Frontend
+   - [x] Window
+   - [x] Renderer
+   - [x] Display framebuffer
+   - [x] Emulator main loop integration
+   - [x] Run ROM ONLY games with visible graphics
+   - [x] Keyboard input forwarding
+   - [x] FrontendTests
+     - [x] Emulator / ROM / SDL integration test
 
 10. Joypad
-    - [ ] FF00
-    - [ ] Keyboard
-    - [ ] Joypad interrupt
+    - [x] FF00
+    - [x] P14 / P15 button group selection
+    - [x] Active-low button state
+    - [x] Keyboard interaction
+    - [x] Joypad interrupt
+    - [x] Joypad tests
 
 11. Cartridge Controllers
     - [ ] Cartridge RAM

@@ -4,12 +4,12 @@
 #include <cstddef>
 #include <cstdint>
 
-#include <PixelLink/GameBoy/Timer.hpp>
-
 namespace PixelLink::GameBoy {
 
 class Cartridge;
+class Joypad;
 class PPU;
+class Timer;
 
 enum class BusAccess : std::uint8_t {
     CPU,
@@ -30,6 +30,12 @@ public:
     auto AttachPPU(PPU& ppu) noexcept -> void;
     auto DetachPPU(const PPU& ppu) noexcept -> void;
 
+    auto AttachTimer(Timer& timer) noexcept -> void;
+    auto DetachTimer(const Timer& timer) noexcept -> void;
+
+    auto AttachJoypad(Joypad& joypad) noexcept -> void;
+    auto DetachJoypad(const Joypad& joypad) noexcept -> void;
+
     [[nodiscard]] auto Read(
         std::uint16_t address,
         BusAccess access = BusAccess::CPU
@@ -41,21 +47,31 @@ public:
         BusAccess access = BusAccess::CPU
     ) -> void;
 
+    // Advances devices that are part of the bus itself.
+    // Timer/PPU are advanced by GameBoy, because GameBoy owns them.
     auto Tick(std::uint32_t tCycles) -> void;
+
+    // Hardware devices use this to raise a bit in IF (FF0F).
+    auto RequestInterrupt(std::uint8_t mask) -> void;
 
     [[nodiscard]] auto IsOAMDMAActive() const noexcept -> bool;
     [[nodiscard]] auto GetOAMDMABytesTransferred() const noexcept
         -> std::size_t;
 
 private:
+    static constexpr std::uint16_t JOYP_REGISTER = 0xFF00;
+    static constexpr std::uint16_t IF_REGISTER = 0xFF0F;
+    static constexpr std::uint8_t JOYPAD_INTERRUPT = 1u << 4;
+
     static constexpr std::uint16_t DMA_REGISTER = 0xFF46;
     static constexpr std::uint16_t OAM_BASE = 0xFE00;
     static constexpr std::size_t OAM_DMA_BYTES = 0x00A0;
     static constexpr std::uint32_t OAM_DMA_T_CYCLES_PER_BYTE = 4;
 
-    Timer timer_;
     Cartridge* cartridge_ = nullptr;
     PPU* ppu_ = nullptr;
+    Timer* timer_ = nullptr;
+    Joypad* joypad_ = nullptr;
 
     // Used only when no cartridge is inserted.
     // This keeps CPU unit tests simple.

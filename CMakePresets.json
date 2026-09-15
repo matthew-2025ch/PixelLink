@@ -1,0 +1,17 @@
+{
+    "version": 5,
+    "cmakeMinimumRequired": {
+        "major": 4,
+        "minor": 2,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "windows-msvc-base",
+            "hidden": true,
+            "generator": "Visual Studio 18 2026",
+            "architecture": "x64",
+            "binaryDir": "${sourceDir}/out/build/${presetName}"
+        }
+    ]
+}

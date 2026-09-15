@@ -30,6 +30,16 @@ namespace GameBoy{
     namespace PPUTest {
         void run();
     }
+
+    namespace JoypadTest {
+        void run();
+    }
 } // namespace GameBoy
+
+namespace Frontend {
+    namespace EmulatorTest {
+        void run();
+    }
+} // namespace Frontend
 
 } // namespace PixelLink::Test

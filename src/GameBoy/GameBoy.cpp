@@ -3,9 +3,14 @@
 namespace PixelLink::GameBoy {
 
 GameBoy::GameBoy()
-    : bus_(),
+    : cartridge_(),
+      timer_(),
+      joypad_(),
+      bus_(),
       ppu_(bus_),
       cpu_(bus_) {
+    bus_.AttachTimer(timer_);
+    bus_.AttachJoypad(joypad_);
 }
 
 auto GameBoy::LoadROM(
@@ -17,11 +22,28 @@ auto GameBoy::LoadROM(
 
 auto GameBoy::Step() -> int {
     const int tCycles = cpu_.Step();
+    const auto elapsed =
+        static_cast<std::uint32_t>(tCycles);
 
-    bus_.Tick(static_cast<std::uint32_t>(tCycles));
-    ppu_.Step(static_cast<std::uint32_t>(tCycles));
+    timer_.Tick(elapsed);
+
+    if (timer_.ConsumeInterruptRequest()) {
+        bus_.RequestInterrupt(TIMER_INTERRUPT);
+    }
+
+    bus_.Tick(elapsed);
+    ppu_.Step(elapsed);
 
     return tCycles;
+}
+
+auto GameBoy::SetButton(
+    const JoypadButton button,
+    const bool pressed
+) -> void {
+    if (joypad_.SetButton(button, pressed)) {
+        bus_.RequestInterrupt(JOYPAD_INTERRUPT);
+    }
 }
 
 auto GameBoy::GetCPU() noexcept -> CPU& {
@@ -55,6 +77,22 @@ auto GameBoy::GetPPU() noexcept -> PPU& {
 
 auto GameBoy::GetPPU() const noexcept -> const PPU& {
     return ppu_;
+}
+
+auto GameBoy::GetTimer() noexcept -> Timer& {
+    return timer_;
+}
+
+auto GameBoy::GetTimer() const noexcept -> const Timer& {
+    return timer_;
+}
+
+auto GameBoy::GetJoypad() noexcept -> Joypad& {
+    return joypad_;
+}
+
+auto GameBoy::GetJoypad() const noexcept -> const Joypad& {
+    return joypad_;
 }
 
 } // namespace PixelLink::GameBoy
