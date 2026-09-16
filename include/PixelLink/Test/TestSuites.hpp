@@ -3,6 +3,15 @@
 namespace PixelLink::Test {
 
 namespace GameBoy{
+
+    namespace BusTest {
+        void run();
+    }
+
+    namespace CartridgeTest {
+        void run();
+    }
+
     namespace CPUTest {
         void run();
     }
@@ -11,19 +20,7 @@ namespace GameBoy{
         void run();
     }
 
-    namespace CartridgeTest {
-        void run();
-    }
-
-    namespace BusTest {
-        void run();
-    }
-
-    namespace TimerTest {
-        void run();
-    }
-
-    namespace TimerIntegrationTest {
+    namespace JoypadTest {
         void run();
     }
 
@@ -31,7 +28,15 @@ namespace GameBoy{
         void run();
     }
 
-    namespace JoypadTest {
+    namespace RTCTest {
+        void run();
+    }
+
+    namespace TimerIntegrationTest {
+        void run();
+    }
+
+    namespace TimerTest {
         void run();
     }
 } // namespace GameBoy

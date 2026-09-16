@@ -85,6 +85,7 @@ add_executable(GameBoyTests
     tests/GameBoy/InterruptTest.cpp
     tests/GameBoy/JoypadTest.cpp
     tests/GameBoy/PPUTest.cpp
+    tests/GameBoy/RTCTest.cpp
     tests/GameBoy/TimerIntegrationTest.cpp
     tests/GameBoy/TimerTest.cpp
 )

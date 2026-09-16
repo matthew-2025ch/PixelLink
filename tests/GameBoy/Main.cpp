@@ -15,6 +15,7 @@ int main() {
         PixelLink::Test::GameBoy::InterruptTest::run();
         PixelLink::Test::GameBoy::JoypadTest::run();
         PixelLink::Test::GameBoy::PPUTest::run();
+        PixelLink::Test::GameBoy::RTCTest::run();
         PixelLink::Test::GameBoy::TimerIntegrationTest::run();
         PixelLink::Test::GameBoy::TimerTest::run();
     }
