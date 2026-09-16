@@ -26,7 +26,7 @@ constexpr int WINDOW_HEIGHT =
 
 const std::filesystem::path ROM_PATH =
     std::filesystem::path(PIXELLINK_PROJECT_DIR) /
-    LR"(assests/gb/games/TicTacToe.gb)";
+    LR"(assests/gb/games/For the Frogs the Bell Tolls (English).gb)";
 
 constexpr double FRAME_SECONDS =
     70'224.0 / 4'194'304.0;

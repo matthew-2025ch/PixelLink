@@ -6,8 +6,13 @@
 
 namespace PixelLink::GameBoy {
 
+Bus::Bus() {
+    InitializePostBootState();
+}
+
 Bus::Bus(Cartridge& cartridge)
     : cartridge_(&cartridge) {
+    InitializePostBootState();
 }
 
 auto Bus::InsertCartridge(
@@ -307,6 +312,31 @@ auto Bus::IsCPUAccessBlockedByPPU(
     }
 
     return false;
+}
+
+auto Bus::InitializePostBootState() noexcept -> void {
+    // CPU::Reset() starts execution at the state immediately after the
+    // DMG boot ROM. The memory-mapped hardware registers therefore need
+    // to start from the corresponding post-boot state as well.
+    //
+    // In particular, LCDC must start enabled. If FF40 remains zero,
+    // PPU::StepOneDot() keeps LY at zero forever, and games that wait for
+    // VBlank before doing their own initialization will never progress.
+    io_.fill(0);
+
+    // LCD / PPU registers.
+    io_[0x40] = 0x91; // FF40 LCDC: LCD on, BG on, unsigned tile data.
+    io_[0x42] = 0x00; // FF42 SCY
+    io_[0x43] = 0x00; // FF43 SCX
+    io_[0x44] = 0x00; // FF44 LY (PPU will maintain this value)
+    io_[0x45] = 0x00; // FF45 LYC
+    io_[0x47] = 0xFC; // FF47 BGP
+    io_[0x48] = 0xFF; // FF48 OBP0
+    io_[0x49] = 0xFF; // FF49 OBP1
+    io_[0x4A] = 0x00; // FF4A WY
+    io_[0x4B] = 0x00; // FF4B WX
+
+    ie_ = 0x00;
 }
 
 auto Bus::StartOAMDMA(

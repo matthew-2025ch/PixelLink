@@ -1,7 +1,5 @@
 ## Stage 1: Game Boy Emulator
 
-**Current milestone:** The emulator core is connected to SDL3, can boot ROM ONLY cartridges, display the rendered Game Boy framebuffer, and accept keyboard input through the emulated Joypad. The SDL3 frontend integration test is running successfully. The next major work is cartridge controller support and broader emulator accuracy.
-
 1. CPU
    - [x] Registers / Opcodes
    - [x] CB Opcodes

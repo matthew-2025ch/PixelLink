@@ -9,94 +9,14 @@ D:.
 |   ProjectPlan.md
 |   ProjectStructure.txt
 |   
-+---.vs
-|   |   CMake Overview
-|   |   cmake.db
-|   |   ProjectSettings.json
-|   |   slnx.sqlite
-|   |   VSWorkspaceState.json
-|   |   
-|   +---PixelLink
-|   |   \---CopilotIndices
-|   |       \---18.10.1181.45497
-|   |               SemanticSymbols.db
-|   |               SemanticSymbols.db-shm
-|   |               SemanticSymbols.db-wal
-|   |               
-|   \---PixelLink.slnx
-|       +---config
-|       |       applicationhost.config
-|       |       
-|       +---FileContentIndex
-|       |       1713dd9d-2fec-411d-95a7-fe9070100865.vsidx
-|       |       3d80fa20-982d-4907-a598-3210bd380dbd.vsidx
-|       |       40d9f372-6f63-454f-886a-0585f0f03cda.vsidx
-|       |       44452c22-57ea-4fe8-b932-92a74d1c2b93.vsidx
-|       |       449e392f-eaa0-4046-af26-6aec45df0d68.vsidx
-|       |       f53d59ce-20c2-4871-9663-16dd95d3d686.vsidx
-|       |       
-|       \---v18
-|           |   Browse.VC.db
-|           |   Browse.VC.db-shm
-|           |   Browse.VC.db-wal
-|           |   DocumentLayout.backup.json
-|           |   DocumentLayout.json
-|           |   
-|           \---ipch
-|               \---AutoPCH
-|                   +---3813dfe40b9edf76
-|                   +---45064c0c8a58bb7b
-|                   |       INTERRUPTTEST.ipch
-|                   |       
-|                   +---545368b2d677f8af
-|                   +---63dd45346e50fb06
-|                   |       BUSTEST.ipch
-|                   |       
-|                   +---67f699b9795e1fab
-|                   +---72a024051461ff9
-|                   |       TIMERTEST.ipch
-|                   |       
-|                   +---8fa65a43f390c8bd
-|                   +---a2b10df42018d0d8
-|                   |       PPU.ipch
-|                   |       
-|                   +---abdc06a54e586766
-|                   |       CPUTEST.ipch
-|                   |       
-|                   +---b26acf3067285844
-|                   |       TIMERINTEGRATIONTEST.ipch
-|                   |       
-|                   +---b7e24482db6b993a
-|                   |       SDLFRONTEND.ipch
-|                   |       
-|                   +---b7e48ef933091382
-|                   |       TIMER.ipch
-|                   |       
-|                   +---bdbea1fa1c2a85f6
-|                   |       CARTRIDGE.ipch
-|                   |       
-|                   +---d164f5cf363e2f45
-|                   |       CARTRIDGETEST.ipch
-|                   |       
-|                   +---e0eb977ce8a3f2af
-|                   |       TIMERINTEGRATIONTEST.ipch
-|                   |       
-|                   +---ec92c986f240bebf
-|                   |       TESTMAIN.ipch
-|                   |       
-|                   +---edd402f057fb5ac7
-|                   |       TESTMAIN.ipch
-|                   |       
-|                   +---f8aefc17d257069
-|                   |       BUS.ipch
-|                   |       
-|                   \---ff05f99e704cdb03
-|                           PPUTEST.ipch
-|                           
 +---assests
 |   \---gb
 |       \---games
-|               ÷”Œ™Õ‹√˘(”¢)(1).gb
+|               Breakout.gb
+|               For the Frogs the Bell Tolls (English).gb
+|               SimpleSnake.gb
+|               Super Breakout! (Europe) (En,Fr,De,Es,It,Nl) (GB Compatible).gbc
+|               TicTacToe.gb
 |               
 +---include
 |   \---PixelLink
@@ -108,6 +28,7 @@ D:.
 |       |       Cartridge.hpp
 |       |       CPU.hpp
 |       |       GameBoy.hpp
+|       |       Joypad.hpp
 |       |       PPU.hpp
 |       |       Timer.hpp
 |       |       
@@ -116,107 +37,6 @@ D:.
 |               TestSuites.hpp
 |               TestUtils.hpp
 |               
-+---out
-|   \---build
-|       \---x64-Debug
-|           |   .ninja_deps
-|           |   .ninja_log
-|           |   build.ninja
-|           |   CMakeCache.txt
-|           |   cmake_install.cmake
-|           |   CTestTestfile.cmake
-|           |   PixelLinkGameBoy.lib
-|           |   PixelLinkTests.exe
-|           |   PixelLinkTests.ilk
-|           |   PixelLinkTests.pdb
-|           |   VSInheritEnvironments.txt
-|           |   
-|           +---.cmake
-|           |   \---api
-|           |       \---v1
-|           |           +---query
-|           |           |   \---client-MicrosoftVS
-|           |           |           query.json
-|           |           |           
-|           |           \---reply
-|           |                   cache-v2-ec3983998a245319dde7.json
-|           |                   cmakeFiles-v1-0e1b2006b0c669eaa353.json
-|           |                   codemodel-v2-0f7674e50ebe942b57a1.json
-|           |                   directory-.-Debug-f040eec181a89de70dbe.json
-|           |                   error-2026-09-14T10-43-11-0338.json
-|           |                   error-2026-09-14T10-55-32-0466.json
-|           |                   error-2026-09-14T10-57-30-0179.json
-|           |                   error-2026-09-14T10-58-37-0046.json
-|           |                   error-2026-09-14T12-08-03-0822.json
-|           |                   error-2026-09-14T12-12-13-0779.json
-|           |                   index-2026-09-14T09-43-18-0873.json
-|           |                   target-PixelLink-Debug-41ec51ee24cf920ac4a6.json
-|           |                   target-PixelLinkGameBoy-Debug-1b0a7b49701fb63f8175.json
-|           |                   target-PixelLinkTests-Debug-ede5fe976e7e73fca889.json
-|           |                   toolchains-v1-cc925c9cf819bdb66559.json
-|           |                   
-|           +---CMakeFiles
-|           |   |   cmake.check_cache
-|           |   |   CMakeConfigureLog.yaml
-|           |   |   InstallScripts.json
-|           |   |   rules.ninja
-|           |   |   TargetDirectories.txt
-|           |   |   
-|           |   +---4.3.1-msvc1
-|           |   |   |   CMakeCXXCompiler.cmake
-|           |   |   |   CMakeDetermineCompilerABI_CXX.bin
-|           |   |   |   CMakeRCCompiler.cmake
-|           |   |   |   CMakeSystem.cmake
-|           |   |   |   
-|           |   |   \---CompilerIdCXX
-|           |   |       |   CMakeCXXCompilerId.cpp
-|           |   |       |   CMakeCXXCompilerId.exe
-|           |   |       |   CMakeCXXCompilerId.obj
-|           |   |       |   
-|           |   |       \---tmp
-|           |   +---PixelLink.dir
-|           |   |   \---src
-|           |   +---PixelLinkGameBoy.dir
-|           |   |   |   PixelLinkGameBoy.pdb
-|           |   |   |   
-|           |   |   \---src
-|           |   |       \---GameBoy
-|           |   |               Bus.cpp.obj
-|           |   |               Cartridge.cpp.obj
-|           |   |               CPU.cpp.obj
-|           |   |               GameBoy.cpp.obj
-|           |   |               PPU.cpp.obj
-|           |   |               Timer.cpp.obj
-|           |   |               
-|           |   +---PixelLinkTests.dir
-|           |   |   |   embed.manifest
-|           |   |   |   intermediate.manifest
-|           |   |   |   manifest.rc
-|           |   |   |   manifest.res
-|           |   |   |   vc140.pdb
-|           |   |   |   
-|           |   |   \---tests
-|           |   |       |   TestMain.cpp.obj
-|           |   |       |   
-|           |   |       \---GameBoy
-|           |   |               BusTest.cpp.obj
-|           |   |               CartridgeTest.cpp.obj
-|           |   |               CPUTest.cpp.obj
-|           |   |               InterruptTest.cpp.obj
-|           |   |               PPUTest.cpp.obj
-|           |   |               TimerIntegrationTest.cpp.obj
-|           |   |               TimerTest.cpp.obj
-|           |   |               
-|           |   +---pkgRedirects
-|           |   \---ShowIncludes
-|           |           foo.h
-|           |           main.c
-|           |           main.obj
-|           |           
-|           \---Testing
-|               \---Temporary
-|                       LastTest.log
-|                       
 +---src
 |   |   Main.cpp
 |   |   
@@ -228,18 +48,21 @@ D:.
 |           Cartridge.cpp
 |           CPU.cpp
 |           GameBoy.cpp
+|           Joypad.cpp
 |           PPU.cpp
 |           Timer.cpp
 |           
 \---tests
     +---Frontend
     |       EmulatorTest.cpp
+    |       Main.cpp
     |       
     \---GameBoy
             BusTest.cpp
             CartridgeTest.cpp
             CPUTest.cpp
             InterruptTest.cpp
+            JoypadTest.cpp
             Main.cpp
             PPUTest.cpp
             TimerIntegrationTest.cpp

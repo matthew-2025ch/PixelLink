@@ -20,7 +20,7 @@ enum class BusAccess : std::uint8_t {
 
 class Bus {
 public:
-    Bus() = default;
+    Bus();
 
     explicit Bus(Cartridge& cartridge);
 
@@ -99,6 +99,8 @@ private:
     [[nodiscard]] auto IsCPUAccessBlockedByPPU(
         std::uint16_t address
     ) const noexcept -> bool;
+
+    auto InitializePostBootState() noexcept -> void;
 
     auto StartOAMDMA(std::uint8_t sourceHigh) -> void;
     auto TickOAMDMA(std::uint32_t tCycles) -> void;

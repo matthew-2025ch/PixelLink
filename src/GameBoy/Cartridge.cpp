@@ -52,66 +52,107 @@ auto Cartridge::Load(const std::filesystem::path& path) -> void {
     }
 
     ParseHeader();
-
-    if (cartridgeHeader.type != 0x00) {
-        throw std::runtime_error(
-            std::format(
-                "Unsupported cartridge type: {} (0x{:02X})",
-                CartridgeTypeName(cartridgeHeader.type),
-                static_cast<unsigned>(cartridgeHeader.type)
-            )
-        );
-    }
+    ConfigureMapper();
+    ResetMapperState();
 }
 
 auto Cartridge::Read(
-    uint16_t address
+    const uint16_t address
 ) const -> uint8_t {
-    // ROM
-    if (address <= 0x7FFF) {
-        if (!Loaded()) {
-            return 0xFF;
-        }
-
-        if (address >= rom.size()) {
-            return 0xFF;
-        }
-
-        return rom[address];
+    if (!Loaded()) {
+        return 0xFF;
     }
 
-    // External cartridge RAM
-    if (
-        address >= 0xA000 &&
-        address <= 0xBFFF
-        ) {
-        // ROM-only cartridges do not provide external RAM yet.
-        return 0xFF;
+    if (address <= 0x7FFF) {
+        switch (mapper_) {
+        case Mapper::ROMOnly:
+            return ReadROMOnly(address);
+
+        case Mapper::MBC1:
+            return ReadMBC1(address);
+        }
+    }
+
+    if (0xA000 <= address && address <= 0xBFFF) {
+        if (mapper_ != Mapper::MBC1 ||
+            !ramEnabled_ ||
+            ram.empty()) {
+            return 0xFF;
+        }
+
+        std::size_t ramBank = 0;
+
+        if (bankingMode_ == 1) {
+            ramBank = bankHigh2_;
+        }
+
+        const std::size_t bankCount = RAMBankCount();
+
+        if (bankCount == 0) {
+            return 0xFF;
+        }
+
+        ramBank %= bankCount;
+
+        const std::size_t offset =
+            ramBank * RAM_BANK_SIZE +
+            static_cast<std::size_t>(address - 0xA000);
+
+        if (offset >= ram.size()) {
+            return 0xFF;
+        }
+
+        return ram[offset];
     }
 
     return 0xFF;
 }
 
 auto Cartridge::Write(
-    uint16_t address,
-    uint8_t value
+    const uint16_t address,
+    const uint8_t value
 ) -> void {
-    // ROM / mapper control
+    if (!Loaded()) {
+        return;
+    }
+
     if (address <= 0x7FFF) {
-        // ROM-only cartridges ignore Writes.
+        if (mapper_ == Mapper::MBC1) {
+            WriteMBC1(address, value);
+        }
+
         return;
     }
 
-    // External cartridge RAM
-    if (
-        address >= 0xA000 &&
-        address <= 0xBFFF
-        ) {
-        // ROM-only cartridges do not provide external RAM yet.
-        return;
-    }
+    if (0xA000 <= address && address <= 0xBFFF) {
+        if (mapper_ != Mapper::MBC1 ||
+            !ramEnabled_ ||
+            ram.empty()) {
+            return;
+        }
 
-    (void)value;
+        std::size_t ramBank = 0;
+
+        if (bankingMode_ == 1) {
+            ramBank = bankHigh2_;
+        }
+
+        const std::size_t bankCount = RAMBankCount();
+
+        if (bankCount == 0) {
+            return;
+        }
+
+        ramBank %= bankCount;
+
+        const std::size_t offset =
+            ramBank * RAM_BANK_SIZE +
+            static_cast<std::size_t>(address - 0xA000);
+
+        if (offset < ram.size()) {
+            ram[offset] = value;
+        }
+    }
 }
 
 auto Cartridge::Loaded() const noexcept -> bool {
@@ -183,6 +224,153 @@ auto Cartridge::ParseHeader() -> void {
         cartridgeHeader.headerChecksum;
 }
 
+auto Cartridge::ConfigureMapper() -> void {
+    ram.clear();
+
+    switch (cartridgeHeader.type) {
+    case 0x00:
+        mapper_ = Mapper::ROMOnly;
+        break;
+
+    case 0x01:
+        mapper_ = Mapper::MBC1;
+        break;
+
+    case 0x02:
+    case 0x03:
+        mapper_ = Mapper::MBC1;
+        ram.resize(cartridgeHeader.declaredRamSize, 0x00);
+        break;
+
+    default:
+        throw std::runtime_error(
+            std::format(
+                "Unsupported cartridge type: {} (0x{:02X})",
+                CartridgeTypeName(cartridgeHeader.type),
+                static_cast<unsigned>(cartridgeHeader.type)
+            )
+        );
+    }
+}
+
+auto Cartridge::ResetMapperState() noexcept -> void {
+    ramEnabled_ = false;
+    romBankLow5_ = 1;
+    bankHigh2_ = 0;
+    bankingMode_ = 0;
+}
+
+auto Cartridge::ReadROMOnly(
+    const uint16_t address
+) const -> uint8_t {
+    if (address >= rom.size()) {
+        return 0xFF;
+    }
+
+    return rom[address];
+}
+
+auto Cartridge::ReadMBC1(
+    const uint16_t address
+) const -> uint8_t {
+    if (address <= 0x3FFF) {
+        std::size_t bank = 0;
+
+        // In MBC1 mode 1, the upper two bank bits also select the
+        // 0000-3FFF region. This matters for ROMs larger than 512 KiB.
+        if (bankingMode_ == 1) {
+            bank = static_cast<std::size_t>(bankHigh2_) << 5u;
+        }
+
+        return ReadROMBank(bank, address);
+    }
+
+    uint8_t low5 = static_cast<uint8_t>(romBankLow5_ & 0x1Fu);
+
+    // MBC1 cannot select banks 00, 20, 40 or 60 in the switchable
+    // region. A zero low-bank value is translated to one.
+    if (low5 == 0) {
+        low5 = 1;
+    }
+
+    const std::size_t bank =
+        (static_cast<std::size_t>(bankHigh2_ & 0x03u) << 5u) |
+        low5;
+
+    return ReadROMBank(
+        bank,
+        static_cast<uint16_t>(address - 0x4000)
+    );
+}
+
+auto Cartridge::WriteMBC1(
+    const uint16_t address,
+    const uint8_t value
+) -> void {
+    if (address <= 0x1FFF) {
+        // Only the low nibble is significant. 0x0A enables RAM.
+        ramEnabled_ = (value & 0x0Fu) == 0x0Au;
+        return;
+    }
+
+    if (address <= 0x3FFF) {
+        romBankLow5_ = static_cast<uint8_t>(value & 0x1Fu);
+        return;
+    }
+
+    if (address <= 0x5FFF) {
+        bankHigh2_ = static_cast<uint8_t>(value & 0x03u);
+        return;
+    }
+
+    bankingMode_ = static_cast<uint8_t>(value & 0x01u);
+}
+
+auto Cartridge::ReadROMBank(
+    std::size_t bank,
+    const uint16_t bankAddress
+) const -> uint8_t {
+    const std::size_t bankCount = ROMBankCount();
+
+    if (bankCount == 0) {
+        return 0xFF;
+    }
+
+    bank %= bankCount;
+
+    const std::size_t offset =
+        bank * ROM_BANK_SIZE +
+        static_cast<std::size_t>(bankAddress);
+
+    if (offset >= rom.size()) {
+        return 0xFF;
+    }
+
+    return rom[offset];
+}
+
+auto Cartridge::ROMBankCount() const noexcept
+-> std::size_t {
+    if (rom.empty()) {
+        return 0;
+    }
+
+    return (
+        rom.size() + ROM_BANK_SIZE - 1
+    ) / ROM_BANK_SIZE;
+}
+
+auto Cartridge::RAMBankCount() const noexcept
+-> std::size_t {
+    if (ram.empty()) {
+        return 0;
+    }
+
+    return (
+        ram.size() + RAM_BANK_SIZE - 1
+    ) / RAM_BANK_SIZE;
+}
+
 auto Cartridge::CalculateHeaderChecksum() const
 -> uint8_t {
     uint8_t checksum = 0;
@@ -230,6 +418,9 @@ auto Cartridge::DecodeRAMSize(uint8_t code)
     switch (code) {
     case 0x00:
         return 0;
+
+    case 0x01:
+        return 2 * 1024;
 
     case 0x02:
         return 8 * 1024;
