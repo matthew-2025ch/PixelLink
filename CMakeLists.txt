@@ -14,14 +14,12 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Dependencies
 # ------------------------------------------------------------
 
-# Use local SDL3 source
-set(SDL_TEST_LIBRARY OFF CACHE BOOL "" FORCE)
-set(SDL_TESTS OFF CACHE BOOL "" FORCE)
-set(SDL_EXAMPLES OFF CACHE BOOL "" FORCE)
-
-add_subdirectory(
-    ${CMAKE_CURRENT_SOURCE_DIR}/SDL3
+# Use local SDL3 package
+set(SDL3_DIR
+    ${CMAKE_CURRENT_SOURCE_DIR}/SDL3/cmake/SDL3
 )
+
+find_package(SDL3 REQUIRED CONFIG)
 
 # ------------------------------------------------------------
 # Game Boy emulator core
