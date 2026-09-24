@@ -14,7 +14,14 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Dependencies
 # ------------------------------------------------------------
 
-find_package(SDL3 REQUIRED CONFIG)
+# Use local SDL3 source
+set(SDL_TEST_LIBRARY OFF CACHE BOOL "" FORCE)
+set(SDL_TESTS OFF CACHE BOOL "" FORCE)
+set(SDL_EXAMPLES OFF CACHE BOOL "" FORCE)
+
+add_subdirectory(
+    ${CMAKE_CURRENT_SOURCE_DIR}/SDL3
+)
 
 # ------------------------------------------------------------
 # Game Boy emulator core
@@ -65,7 +72,7 @@ target_link_libraries(PixelLinkEmulator
 # add_executable(PixelLink
 #     src/Main.cpp
 # )
-# 
+#
 # target_link_libraries(PixelLink
 #     PRIVATE
 #         PixelLink::Emulator
