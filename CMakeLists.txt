@@ -14,25 +14,27 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Dependencies
 # ------------------------------------------------------------
 
-# Use local SDL3 package
-set(SDL3_DIR
-    ${CMAKE_CURRENT_SOURCE_DIR}/SDL3/cmake/SDL3
+add_subdirectory(
+    external/SDL
+    EXCLUDE_FROM_ALL
 )
-
-find_package(SDL3 REQUIRED CONFIG)
 
 # ------------------------------------------------------------
 # Game Boy emulator core
 # ------------------------------------------------------------
 
 add_library(PixelLinkGameBoy STATIC
-    src/GameBoy/Bus.cpp
-    src/GameBoy/Cartridge.cpp
-    src/GameBoy/CPU.cpp
-    src/GameBoy/GameBoy.cpp
-    src/GameBoy/Joypad.cpp
-    src/GameBoy/PPU.cpp
-    src/GameBoy/Timer.cpp
+    src/PixelLink/GameBoy/Mapper/ROMOnly.cpp
+    src/PixelLink/GameBoy/Mapper/MBC1.cpp
+    src/PixelLink/GameBoy/Mapper/MBC3.cpp
+    src/PixelLink/GameBoy/Mapper/MBC5.cpp
+    src/PixelLink/GameBoy/Bus.cpp
+    src/PixelLink/GameBoy/Cartridge.cpp
+    src/PixelLink/GameBoy/CPU.cpp
+    src/PixelLink/GameBoy/GameBoy.cpp
+    src/PixelLink/GameBoy/Joypad.cpp
+    src/PixelLink/GameBoy/PPU.cpp
+    src/PixelLink/GameBoy/Timer.cpp
 )
 
 add_library(PixelLink::GameBoy ALIAS PixelLinkGameBoy)
@@ -47,7 +49,7 @@ target_include_directories(PixelLinkGameBoy
 # ------------------------------------------------------------
 
 add_library(PixelLinkEmulator STATIC
-    src/Frontend/Emulator.cpp
+    src/PixelLink/Frontend/Emulator.cpp
 )
 
 add_library(PixelLink::Emulator ALIAS PixelLinkEmulator)
@@ -68,7 +70,7 @@ target_link_libraries(PixelLinkEmulator
 # ------------------------------------------------------------
 
 # add_executable(PixelLink
-#     src/Main.cpp
+#     src/PixelLink/Main.cpp
 # )
 #
 # target_link_libraries(PixelLink
@@ -83,16 +85,16 @@ target_link_libraries(PixelLinkEmulator
 enable_testing()
 
 add_executable(GameBoyTests
-    tests/GameBoy/Main.cpp
-    tests/GameBoy/BusTest.cpp
-    tests/GameBoy/CartridgeTest.cpp
-    tests/GameBoy/CPUTest.cpp
-    tests/GameBoy/InterruptTest.cpp
-    tests/GameBoy/JoypadTest.cpp
-    tests/GameBoy/PPUTest.cpp
-    tests/GameBoy/RTCTest.cpp
-    tests/GameBoy/TimerIntegrationTest.cpp
-    tests/GameBoy/TimerTest.cpp
+    tests/PixelLink/GameBoy/Main.cpp
+    tests/PixelLink/GameBoy/BusTest.cpp
+    tests/PixelLink/GameBoy/CartridgeTest.cpp
+    tests/PixelLink/GameBoy/CPUTest.cpp
+    tests/PixelLink/GameBoy/InterruptTest.cpp
+    tests/PixelLink/GameBoy/JoypadTest.cpp
+    tests/PixelLink/GameBoy/PPUTest.cpp
+    tests/PixelLink/GameBoy/RTCTest.cpp
+    tests/PixelLink/GameBoy/TimerIntegrationTest.cpp
+    tests/PixelLink/GameBoy/TimerTest.cpp
 )
 
 target_link_libraries(GameBoyTests
@@ -110,8 +112,8 @@ add_test(
 # ------------------------------------------------------------
 
 add_executable(FrontendTests
-    tests/Frontend/Main.cpp
-    tests/Frontend/EmulatorTest.cpp
+    tests/PixelLink/Frontend/Main.cpp
+    tests/PixelLink/Frontend/EmulatorTest.cpp
 )
 
 target_link_libraries(FrontendTests

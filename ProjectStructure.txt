@@ -1,29 +1,20 @@
-文件夹 PATH 列表
-卷序列号为 66FA-0C39
-D:.
-|   .gitattributes
-|   .gitignore
-|   CMakeLists.txt
-|   CMakePresets.json
-|   CMakeUserPresets.json
-|   ProjectPlan.md
-|   ProjectStructure.txt
-|   
 +---assests
-|   \---gb
-|       \---games
-|               Breakout.gb
-|               For the Frogs the Bell Tolls (English).gb
-|               SimpleSnake.gb
-|               Super Breakout! (Europe) (En,Fr,De,Es,It,Nl) (GB Compatible).gbc
-|               TicTacToe.gb
-|               
+|   \---games
+|           Breakout.gb
+|           For the Frogs the Bell Tolls (English).gb
+|           MBC3_Test.gbc
+|           SimpleSnake.gb
+|           Super Breakout! (Europe) (En,Fr,De,Es,It,Nl) (GB Compatible).gbc
+|           TicTacToe.gb
 +---include
 |   \---PixelLink
 |       +---Frontend
 |       |       Emulator.hpp
 |       |       
 |       +---GameBoy
+|       |   +---Mapper
+|       |   |       Mapper.hpp
+|       |   |       MBC5.hpp
 |       |       Bus.hpp
 |       |       Cartridge.hpp
 |       |       CPU.hpp
@@ -36,35 +27,38 @@ D:.
 |               TestFramework.hpp
 |               TestSuites.hpp
 |               TestUtils.hpp
-|               
 +---src
-|   |   Main.cpp
-|   |   
-|   +---Frontend
-|   |       Emulator.cpp
-|   |       
-|   \---GameBoy
-|           Bus.cpp
-|           Cartridge.cpp
-|           CPU.cpp
-|           GameBoy.cpp
-|           Joypad.cpp
-|           PPU.cpp
-|           Timer.cpp
-|           
+|   \---PixelLink
+|       |   Main.cpp
+|       |   
+|       +---Frontend
+|       |       Emulator.cpp
+|       |       
+|       +---GameBoy
+|       |   \---Mapper
+|       |           Mapper.hpp
+|       |       Bus.cpp
+|       |       Cartridge.cpp
+|       |       CPU.cpp
+|       |       GameBoy.cpp
+|       |       Joypad.cpp
+|       |       PPU.cpp
+|       |       Timer.cpp
+|               
 \---tests
-    +---Frontend
-    |       EmulatorTest.cpp
-    |       Main.cpp
-    |       
-    \---GameBoy
-            BusTest.cpp
-            CartridgeTest.cpp
-            CPUTest.cpp
-            InterruptTest.cpp
-            JoypadTest.cpp
-            Main.cpp
-            PPUTest.cpp
-            TimerIntegrationTest.cpp
-            TimerTest.cpp
-            
+    \---PixelLink
+        +---Frontend
+        |       EmulatorTest.cpp
+        |       Main.cpp
+        |       
+        \---GameBoy
+                BusTest.cpp
+                CartridgeTest.cpp
+                CPUTest.cpp
+                InterruptTest.cpp
+                JoypadTest.cpp
+                Main.cpp
+                PPUTest.cpp
+                RTCTest.cpp
+                TimerIntegrationTest.cpp
+                TimerTest.cpp

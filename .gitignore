@@ -60,6 +60,7 @@ ipch/
 *.bak
 *~
 ~$*
+ProjectStructure.txt
 
 # OS
 .DS_Store
