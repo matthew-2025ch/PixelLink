@@ -2,6 +2,8 @@
 
 #include <PixelLink/Test/TestSuites.hpp>
 
+using namespace PixelLink::Test::GameBoy;
+
 int main() {
     try {
         std::cout
@@ -9,15 +11,19 @@ int main() {
             << " Game Boy Core Tests\n"
             << "==============================\n\n";
 
-        PixelLink::Test::GameBoy::BusTest::run();
-        PixelLink::Test::GameBoy::CartridgeTest::run();
-        PixelLink::Test::GameBoy::CPUTest::run();
-        PixelLink::Test::GameBoy::InterruptTest::run();
-        PixelLink::Test::GameBoy::JoypadTest::run();
-        PixelLink::Test::GameBoy::PPUTest::run();
-        PixelLink::Test::GameBoy::RTCTest::run();
-        PixelLink::Test::GameBoy::TimerIntegrationTest::run();
-        PixelLink::Test::GameBoy::TimerTest::run();
+        BusTest::run();
+        CartridgeTest::run();
+        CPUTest::run();
+        InterruptTest::run();
+        JoypadTest::run();
+        MapperFactoryTest::run();
+        MBC1Test::run();
+        MBC3Test::run();
+        MBC5Test::run();
+        PPUTest::run();
+        RTCTest::run();
+        TimerIntegrationTest::run();
+        TimerTest::run();
     }
     catch (...) {
         std::cerr

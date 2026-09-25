@@ -24,6 +24,22 @@ namespace GameBoy{
         void run();
     }
 
+    namespace MapperFactoryTest {
+        void run();
+    }
+
+    namespace MBC1Test {
+        void run();
+    }
+
+    namespace MBC3Test {
+        void run();
+    }
+
+    namespace MBC5Test {
+        void run();
+    }
+
     namespace PPUTest {
         void run();
     }

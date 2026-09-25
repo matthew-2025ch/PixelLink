@@ -42,6 +42,12 @@ public:
     [[nodiscard]] auto GetJoypad() noexcept -> Joypad&;
     [[nodiscard]] auto GetJoypad() const noexcept -> const Joypad&;
 
+    GameBoy(const GameBoy&) = delete;
+    GameBoy& operator=(const GameBoy&) = delete;
+
+    GameBoy(GameBoy&&) = delete;
+    GameBoy& operator=(GameBoy&&) = delete;
+
 private:
     static constexpr std::uint8_t TIMER_INTERRUPT = 1u << 2;
     static constexpr std::uint8_t JOYPAD_INTERRUPT = 1u << 4;

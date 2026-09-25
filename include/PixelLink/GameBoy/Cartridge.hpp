@@ -39,6 +39,12 @@ public:
 
     auto PrintInfo(std::ostream& os) const -> void;
 
+    Cartridge(const Cartridge&) = delete;
+    Cartridge& operator=(const Cartridge&) = delete;
+
+    Cartridge(Cartridge&&) = delete;
+    Cartridge& operator=(Cartridge&&) = delete;
+
 private:
     std::vector<uint8_t> rom;
     std::vector<uint8_t> ram;

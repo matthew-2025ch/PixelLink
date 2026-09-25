@@ -10,12 +10,8 @@ public:
     virtual auto ReadROM(uint16_t address) const -> uint8_t = 0;
     virtual auto WriteROM(uint16_t address, uint8_t value) -> void = 0;
 
-    virtual auto ReadRAM(uint16_t address) const -> uint8_t {
-        return 0xFF;
-    }
-
-    virtual auto WriteRAM(uint16_t address, uint8_t value) -> void {
-    }
+    virtual auto ReadRAM(uint16_t address) -> uint8_t = 0;
+    virtual auto WriteRAM(uint16_t address, uint8_t value) -> void = 0;
 };
 
 }

@@ -34,7 +34,7 @@ auto MBC1::WriteROM(uint16_t address, uint8_t value) -> void {
     }
 }
 
-auto MBC1::ReadRAM(uint16_t address) const -> uint8_t {
+auto MBC1::ReadRAM(uint16_t address) -> uint8_t {
     if (!ramEnabled_ || ram_.empty()) return 0xFF;
 
     size_t bank = bankingMode_ ? bankHigh2_ : 0;

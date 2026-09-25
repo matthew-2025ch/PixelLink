@@ -32,7 +32,7 @@ auto MBC5::WriteROM(uint16_t address, uint8_t value) -> void {
     }
 }
 
-auto MBC5::ReadRAM(uint16_t address) const -> uint8_t {
+auto MBC5::ReadRAM(uint16_t address) -> uint8_t {
     if (!ramEnabled_ || ram_.empty()) return 0xFF;
 
     size_t offset =

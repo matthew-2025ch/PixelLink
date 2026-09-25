@@ -92,31 +92,31 @@
    - [x] Run ROM ONLY games with visible graphics
    - [x] Keyboard input forwarding
    - [x] FrontendTests
-     - [x] Emulator / ROM / SDL integration test
+   - [x] Emulator / ROM / SDL integration test
 
 10. Joypad
-    - [x] FF00
-    - [x] P14 / P15 button group selection
-    - [x] Active-low button state
-    - [x] Keyboard interaction
-    - [x] Joypad interrupt
-    - [x] Joypad tests
+   - [x] FF00
+   - [x] P14 / P15 button group selection
+   - [x] Active-low button state
+   - [x] Keyboard interaction
+   - [x] Joypad interrupt
+   - [x] Joypad tests
 
 11. Cartridge Controllers
-    - [ ] Cartridge RAM
-    - [ ] MBC1
-    - [ ] MBC3
-    - [ ] MBC5
-    - [ ] Save files
+   - [x] Cartridge RAM
+   - [x] MBC1
+   - [x] MBC3
+   - [x] MBC5
+   - [ ] Save files
 
 12. Accuracy
-    - [ ] Test ROMs
-    - [ ] HALT bug
-    - [ ] Timing edge cases
+   - [ ] Test ROMs
+   - [ ] HALT bug
+   - [ ] Timing edge cases
 
 13. APU
-    - [ ] Audio channels
-    - [ ] SDL Audio
+   - [ ] Audio channels
+   - [ ] SDL Audio
 
 ## Stage 2: WLAN Remote Controlling
 

@@ -11,7 +11,7 @@ public:
     auto ReadROM(uint16_t address) const -> uint8_t override;
     auto WriteROM(uint16_t address, uint8_t value) -> void override;
 
-    auto ReadRAM(uint16_t address) const -> uint8_t override;
+    auto ReadRAM(uint16_t address) -> uint8_t override;
     auto WriteRAM(uint16_t address, uint8_t value) -> void override;
 
 private:
