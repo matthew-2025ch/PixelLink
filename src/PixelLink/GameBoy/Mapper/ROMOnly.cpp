@@ -17,4 +17,11 @@ auto ROMOnly::ReadROM(uint16_t address) const -> uint8_t {
 auto ROMOnly::WriteROM(uint16_t, uint8_t) -> void {
 }
 
+auto ROMOnly::ReadRAM(uint16_t) -> uint8_t {
+    return 0xFF;
+}
+
+auto ROMOnly::WriteRAM(uint16_t, uint8_t) -> void {
+}
+
 }

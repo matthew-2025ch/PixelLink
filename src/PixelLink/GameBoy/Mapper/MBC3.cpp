@@ -4,10 +4,12 @@ namespace PixelLink::GameBoy {
 
 MBC3::MBC3(
     std::vector<uint8_t>& rom,
-    std::vector<uint8_t>& ram
+    std::vector<uint8_t>& ram,
+    bool hasRTC
 )
     : rom_(rom),
       ram_(ram),
+      hasRTC_(hasRTC),
       rtcLastUpdate_(std::chrono::steady_clock::now())
 {
 }
@@ -76,13 +78,17 @@ auto MBC3::ReadRAM(
     if (ramRTCSelect_ >= 0x08 &&
         ramRTCSelect_ <= 0x0C) {
 
-        return ReadRTCRegister(
-            ramRTCSelect_
-        );
+        return hasRTC_
+            ? ReadRTCRegister(ramRTCSelect_)
+            : 0xFF;
+    }
+
+    if (ramRTCSelect_ > 0x03) {
+        return 0xFF;
     }
 
     const std::size_t offset =
-        (ramRTCSelect_ & 0x03) * 0x2000 +
+        ramRTCSelect_ * 0x2000 +
         (address - 0xA000);
 
     return offset < ram_.size()
@@ -102,16 +108,19 @@ auto MBC3::WriteRAM(
     if (ramRTCSelect_ >= 0x08 &&
         ramRTCSelect_ <= 0x0C) {
 
-        WriteRTCRegister(
-            ramRTCSelect_,
-            value
-        );
+        if (hasRTC_) {
+            WriteRTCRegister(ramRTCSelect_, value);
+        }
 
         return;
     }
 
+    if (ramRTCSelect_ > 0x03) {
+        return;
+    }
+
     const std::size_t offset =
-        (ramRTCSelect_ & 0x03) * 0x2000 +
+        ramRTCSelect_ * 0x2000 +
         (address - 0xA000);
 
     if (offset < ram_.size()) {

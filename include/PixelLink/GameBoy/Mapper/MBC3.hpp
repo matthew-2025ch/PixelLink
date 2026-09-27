@@ -13,7 +13,8 @@ class MBC3 final : public Mapper {
 public:
     MBC3(
         std::vector<uint8_t>& rom,
-        std::vector<uint8_t>& ram
+        std::vector<uint8_t>& ram,
+        bool hasRTC
     );
 
     auto ReadROM(uint16_t address) const -> uint8_t override;
@@ -35,6 +36,7 @@ private:
 
     std::vector<uint8_t>& rom_;
     std::vector<uint8_t>& ram_;
+    bool hasRTC_;
 
     bool ramEnabled_ = false;
 

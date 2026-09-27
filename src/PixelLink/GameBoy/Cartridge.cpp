@@ -154,7 +154,9 @@ auto Cartridge::ConfigureMapper() -> void
         mapper_ =
             std::make_unique<MBC3>(
                 rom,
-                ram
+                ram,
+                cartridgeHeader.type == 0x0F ||
+                    cartridgeHeader.type == 0x10
             );
         break;
 
