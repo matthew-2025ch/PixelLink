@@ -151,12 +151,21 @@ auto MBC3::SyncRTC() -> void
     rtcLastUpdate_ +=
         std::chrono::seconds(elapsed);
 
+    AdvanceRTC(static_cast<uint64_t>(elapsed));
+}
+
+auto MBC3::AdvanceRTC(uint64_t seconds) -> void
+{
+    if (seconds == 0 || rtc_.halt) {
+        return;
+    }
+
     uint64_t total =
         rtc_.seconds +
         rtc_.minutes * 60 +
         rtc_.hours * 3600 +
         rtc_.days * 86400 +
-        elapsed;
+        seconds;
 
     const uint64_t days =
         total / 86400;
@@ -182,6 +191,37 @@ auto MBC3::SyncRTC() -> void
 
     rtc_.seconds =
         static_cast<uint8_t>(total % 60);
+}
+
+auto MBC3::SnapshotRTC() -> RTCRegisters
+{
+    SyncRTC();
+
+    RTCRegisters registers{};
+    for (uint8_t reg = 0x08; reg <= 0x0C; ++reg) {
+        registers[reg - 0x08] = RTCRegisterValue(reg);
+    }
+    return registers;
+}
+
+auto MBC3::RestoreRTC(
+    const RTCRegisters& registers,
+    uint64_t elapsedSeconds
+) -> void
+{
+    rtc_.seconds = registers[0];
+    rtc_.minutes = registers[1];
+    rtc_.hours = registers[2];
+    rtc_.days = static_cast<uint16_t>(
+        registers[3] | ((registers[4] & 1) << 8)
+    );
+    rtc_.halt = (registers[4] & 0x40) != 0;
+    rtc_.carry = (registers[4] & 0x80) != 0;
+
+    rtcLatchedValid_ = false;
+    lastLatchWrite_ = 0xFF;
+    rtcLastUpdate_ = std::chrono::steady_clock::now();
+    AdvanceRTC(elapsedSeconds);
 }
 
 auto MBC3::LatchRTC() -> void

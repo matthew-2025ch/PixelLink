@@ -97,6 +97,7 @@ add_executable(GameBoyTests
     tests/PixelLink/GameBoy/MBC5Test.cpp
     tests/PixelLink/GameBoy/PPUTest.cpp
     tests/PixelLink/GameBoy/RTCTest.cpp
+    tests/PixelLink/GameBoy/SaveTest.cpp
     tests/PixelLink/GameBoy/TimerIntegrationTest.cpp
     tests/PixelLink/GameBoy/TimerTest.cpp
 )

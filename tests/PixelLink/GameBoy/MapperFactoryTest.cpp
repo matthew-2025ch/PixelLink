@@ -12,21 +12,18 @@ void run() {
     Test::run(
         "Mapper / Factory creation",
         [] {
-            std::filesystem::path path = "mapper_test.gb";
-
-            MapperTestUtils::CreateROM(
-                path,
+            MapperTestUtils::TempROM rom(
+                "mapper_test.gb",
                 0x13,
                 0x01,
                 0x03
             );
 
             Cartridge cartridge;
-            cartridge.Load(path);
+            cartridge.Load(rom.path());
 
             CHECK(cartridge.Loaded());
 
-            std::filesystem::remove(path);
         }
     );
 }

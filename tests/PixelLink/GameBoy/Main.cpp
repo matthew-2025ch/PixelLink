@@ -22,6 +22,7 @@ int main() {
         MBC5Test::run();
         PPUTest::run();
         RTCTest::run();
+        SaveTest::run();
         TimerIntegrationTest::run();
         TimerTest::run();
     }

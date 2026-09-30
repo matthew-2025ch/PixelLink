@@ -99,6 +99,13 @@ public:
         const uint8_t cartridgeType
     )
         : path_(std::move(path)) {
+        std::error_code error;
+        auto savePath = path_;
+        savePath.replace_extension(".sav");
+        auto rtcPath = path_;
+        rtcPath.replace_extension(".rtc");
+        std::filesystem::remove(savePath, error);
+        std::filesystem::remove(rtcPath, error);
         createTestRom(
             path_,
             cartridgeType
@@ -112,6 +119,12 @@ public:
             path_,
             error
         );
+        auto savePath = path_;
+        savePath.replace_extension(".sav");
+        auto rtcPath = path_;
+        rtcPath.replace_extension(".rtc");
+        std::filesystem::remove(savePath, error);
+        std::filesystem::remove(rtcPath, error);
     }
 
     TempRom(const TempRom&) = delete;

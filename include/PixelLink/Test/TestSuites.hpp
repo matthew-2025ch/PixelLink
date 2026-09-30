@@ -48,6 +48,10 @@ namespace GameBoy{
         void run();
     }
 
+    namespace SaveTest {
+        void run();
+    }
+
     namespace TimerIntegrationTest {
         void run();
     }

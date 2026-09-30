@@ -27,8 +27,10 @@ struct CartridgeHeader {
 class Cartridge {
 public:
     Cartridge() = default;
+    ~Cartridge() noexcept;
 
     auto Load(const std::filesystem::path& path) -> void;
+    auto Save() -> void;
 
     auto Read(uint16_t address) const -> uint8_t;
     auto Write(uint16_t address, uint8_t value) -> void;
@@ -52,9 +54,14 @@ private:
     CartridgeHeader cartridgeHeader;
 
     std::unique_ptr<Mapper> mapper_;
+    std::filesystem::path savePath_;
+    std::filesystem::path rtcPath_;
+    bool batteryBacked_ = false;
+    bool saveDirty_ = false;
 
     auto ParseHeader() -> void;
     auto ConfigureMapper() -> void;
+    auto LoadSave() -> void;
 
     [[nodiscard]] auto CalculateHeaderChecksum() const -> uint8_t;
     [[nodiscard]] static auto DecodeROMSize(uint8_t code) -> std::size_t;

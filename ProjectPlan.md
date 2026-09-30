@@ -107,7 +107,7 @@
    - [x] MBC1
    - [x] MBC3
    - [x] MBC5
-   - [ ] Save files
+   - [x] Save files
 
 12. Accuracy
    - [ ] Test ROMs

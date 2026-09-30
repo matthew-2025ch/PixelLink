@@ -53,6 +53,7 @@ ipch/
 *.gb
 *.gbc
 *.sav
+*.rtc
 
 # Temporary files
 *.tmp

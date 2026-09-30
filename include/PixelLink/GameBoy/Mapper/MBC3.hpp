@@ -11,6 +11,8 @@ namespace PixelLink::GameBoy {
 
 class MBC3 final : public Mapper {
 public:
+    using RTCRegisters = std::array<uint8_t, 5>;
+
     MBC3(
         std::vector<uint8_t>& rom,
         std::vector<uint8_t>& ram,
@@ -22,6 +24,12 @@ public:
 
     auto ReadRAM(uint16_t address) -> uint8_t override;
     auto WriteRAM(uint16_t address, uint8_t value) -> void override;
+
+    auto SnapshotRTC() -> RTCRegisters;
+    auto RestoreRTC(
+        const RTCRegisters& registers,
+        uint64_t elapsedSeconds
+    ) -> void;
 
 private:
     struct RTCState {
@@ -51,6 +59,7 @@ private:
     std::chrono::steady_clock::time_point rtcLastUpdate_;
 
     auto SyncRTC() -> void;
+    auto AdvanceRTC(uint64_t seconds) -> void;
 
     auto LatchRTC() -> void;
 

@@ -12,24 +12,21 @@ void run() {
     Test::run(
         "MBC3 / RAM access",
         [] {
-            std::filesystem::path path = "mbc3_ram_test.gb";
-
-            MapperTestUtils::CreateROM(
-                path,
+            MapperTestUtils::TempROM rom(
+                "mbc3_ram_test.gb",
                 0x13,
                 0x01,
                 0x03
             );
 
             Cartridge cartridge;
-            cartridge.Load(path);
+            cartridge.Load(rom.path());
 
             cartridge.Write(0x0000, 0x0A);
             cartridge.Write(0xA000, 0x66);
 
             CHECK(cartridge.Read(0xA000) == 0x66);
 
-            std::filesystem::remove(path);
         }
     );
 }
