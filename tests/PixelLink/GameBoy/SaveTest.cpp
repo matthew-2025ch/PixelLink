@@ -10,10 +10,9 @@
 #include <PixelLink/GameBoy/Cartridge.hpp>
 #include <PixelLink/Test/TestFramework.hpp>
 #include <PixelLink/Test/TestSuites.hpp>
+#include <PixelLink/Test/GameBoy/MapperTestUtils.hpp>
 
-#include "MapperTestUtils.hpp"
-
-using PixelLink::GameBoy::Cartridge;
+using namespace PixelLink::GameBoy;
 
 namespace PixelLink::Test::GameBoy::SaveTest {
 namespace {

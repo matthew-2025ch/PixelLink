@@ -1,8 +1,7 @@
 #include <filesystem>
 #include <PixelLink/GameBoy/Cartridge.hpp>
 #include <PixelLink/Test/TestFramework.hpp>
-
-#include "MapperTestUtils.hpp"
+#include <PixelLink/Test/GameBoy/MapperTestUtils.hpp>
 
 using namespace PixelLink::GameBoy;
 
