@@ -58,6 +58,9 @@ private:
     Bus bus_;
     PPU ppu_;
     CPU cpu_;
+    std::uint32_t advancedCycles_ = 0;
+
+    auto TickDevices(std::uint32_t cycles) -> void;
 };
 
 } // namespace PixelLink::GameBoy

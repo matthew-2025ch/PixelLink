@@ -14,6 +14,7 @@ int main() {
         BusTest::run();
         CartridgeTest::run();
         CPUTest::run();
+        CoreTimingTest::run();
         InterruptTest::run();
         JoypadTest::run();
         MapperFactoryTest::run();

@@ -1,10 +1,24 @@
 #include <PixelLink/GameBoy/Bus.hpp>
 #include <PixelLink/GameBoy/CPU.hpp>
 
+#include <utility>
+
 namespace PixelLink::GameBoy {
 
 CPU::CPU(Bus& bus) : bus(bus) {
     Reset();
+}
+
+auto CPU::SetCycleCallback(
+    std::function<void(std::uint32_t)> callback
+) -> void {
+    cycleCallback_ = std::move(callback);
+}
+
+auto CPU::AdvanceCycles(const std::uint32_t cycles) -> void {
+    if (cycleCallback_) {
+        cycleCallback_(cycles);
+    }
 }
 
 auto CPU::Reset() -> void {
@@ -553,7 +567,14 @@ auto CPU::Execute(uint8_t opcode) -> int {
     case 0xEE: XorA(Fetch8()); return 8;
     case 0xEF: return Restart(0x28);
 
-    case 0xF0: A = bus.Read(static_cast<uint16_t>(0xFF00u + Fetch8())); return 12;
+    case 0xF0: {
+        const auto offset = Fetch8();
+        // LDH A,(a8) reads on its third machine cycle. Advance the
+        // peripherals through opcode and operand fetch before sampling IO.
+        AdvanceCycles(8);
+        A = bus.Read(static_cast<uint16_t>(0xFF00u + offset));
+        return 12;
+    }
     case 0xF1: {
         const uint16_t value = Pop16();
         A = static_cast<uint8_t>(value >> 8);

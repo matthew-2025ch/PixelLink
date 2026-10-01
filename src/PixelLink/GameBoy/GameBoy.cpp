@@ -11,6 +11,10 @@ GameBoy::GameBoy()
       cpu_(bus_) {
     bus_.AttachTimer(timer_);
     bus_.AttachJoypad(joypad_);
+    cpu_.SetCycleCallback([this](const std::uint32_t cycles) {
+        TickDevices(cycles);
+        advancedCycles_ += cycles;
+    });
 }
 
 auto GameBoy::LoadROM(
@@ -21,10 +25,14 @@ auto GameBoy::LoadROM(
 }
 
 auto GameBoy::Step() -> int {
+    advancedCycles_ = 0;
     const int tCycles = cpu_.Step();
-    const auto elapsed =
-        static_cast<std::uint32_t>(tCycles);
+    TickDevices(static_cast<std::uint32_t>(tCycles) - advancedCycles_);
 
+    return tCycles;
+}
+
+auto GameBoy::TickDevices(const std::uint32_t elapsed) -> void {
     timer_.Tick(elapsed);
 
     if (timer_.ConsumeInterruptRequest()) {
@@ -33,8 +41,6 @@ auto GameBoy::Step() -> int {
 
     bus_.Tick(elapsed);
     ppu_.Step(elapsed);
-
-    return tCycles;
 }
 
 auto GameBoy::SetButton(

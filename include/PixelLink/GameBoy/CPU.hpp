@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <stdexcept>
 #include <format>
+#include <functional>
 
 namespace PixelLink::GameBoy {
 
@@ -14,6 +15,7 @@ public:
 
     auto Reset() -> void;
     auto Step() -> int;
+    auto SetCycleCallback(std::function<void(std::uint32_t)> callback) -> void;
 
 #ifndef _DEBUG
 private:
@@ -43,6 +45,9 @@ private:
     };
 
     Bus& bus;
+    std::function<void(std::uint32_t)> cycleCallback_;
+
+    auto AdvanceCycles(std::uint32_t cycles) -> void;
 
     auto Fetch8() -> uint8_t;
     auto Fetch16() -> uint16_t;

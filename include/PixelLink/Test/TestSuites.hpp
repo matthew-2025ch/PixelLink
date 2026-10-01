@@ -16,6 +16,10 @@ namespace GameBoy{
         void run();
     }
 
+    namespace CoreTimingTest {
+        void run();
+    }
+
     namespace InterruptTest {
         void run();
     }

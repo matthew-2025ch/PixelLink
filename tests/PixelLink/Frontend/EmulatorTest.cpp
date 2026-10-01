@@ -26,7 +26,7 @@ constexpr int WINDOW_HEIGHT =
 
 const std::filesystem::path ROM_PATH =
     std::filesystem::path(PIXELLINK_PROJECT_DIR) /
-    LR"(assests/games/MBC3_Test.gbc)";
+    LR"(assests/games/Super Breakout! (Europe) (En,Fr,De,Es,It,Nl) (GB Compatible).gbc)";
 
 constexpr double FRAME_SECONDS =
     70'224.0 / 4'194'304.0;

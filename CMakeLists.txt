@@ -89,6 +89,7 @@ add_executable(GameBoyTests
     tests/PixelLink/GameBoy/BusTest.cpp
     tests/PixelLink/GameBoy/CartridgeTest.cpp
     tests/PixelLink/GameBoy/CPUTest.cpp
+    tests/PixelLink/GameBoy/CoreTimingTest.cpp
     tests/PixelLink/GameBoy/InterruptTest.cpp
     tests/PixelLink/GameBoy/JoypadTest.cpp
     tests/PixelLink/GameBoy/MapperFactoryTest.cpp
