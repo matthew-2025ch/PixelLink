@@ -24,6 +24,7 @@ add_subdirectory(
 # ------------------------------------------------------------
 
 add_library(PixelLinkGameBoy STATIC
+    src/PixelLink/GameBoy/APU.cpp
     src/PixelLink/GameBoy/Mapper/ROMOnly.cpp
     src/PixelLink/GameBoy/Mapper/MBC1.cpp
     src/PixelLink/GameBoy/Mapper/MBC3.cpp
@@ -86,6 +87,7 @@ enable_testing()
 
 add_executable(GameBoyTests
     tests/PixelLink/GameBoy/Main.cpp
+    tests/PixelLink/GameBoy/APUTest.cpp
     tests/PixelLink/GameBoy/BusTest.cpp
     tests/PixelLink/GameBoy/CartridgeTest.cpp
     tests/PixelLink/GameBoy/CPUTest.cpp
@@ -141,4 +143,17 @@ target_compile_definitions(FrontendTests
 add_test(
     NAME FrontendTests
     COMMAND FrontendTests
+)
+
+add_executable(AudioFrontendTests
+    tests/PixelLink/Frontend/AudioTest.cpp
+)
+
+target_link_libraries(AudioFrontendTests
+    PRIVATE PixelLink::Emulator
+)
+
+add_test(
+    NAME AudioFrontendTests
+    COMMAND AudioFrontendTests
 )

@@ -4,6 +4,10 @@ namespace PixelLink::Test {
 
 namespace GameBoy{
 
+    namespace APUTest {
+        void run();
+    }
+
     namespace BusTest {
         void run();
     }

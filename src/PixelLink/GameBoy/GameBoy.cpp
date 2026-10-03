@@ -6,11 +6,13 @@ GameBoy::GameBoy()
     : cartridge_(),
       timer_(),
       joypad_(),
+      apu_(),
       bus_(),
       ppu_(bus_),
       cpu_(bus_) {
     bus_.AttachTimer(timer_);
     bus_.AttachJoypad(joypad_);
+    bus_.AttachAPU(apu_);
     cpu_.SetCycleCallback([this](const std::uint32_t cycles) {
         TickDevices(cycles);
         advancedCycles_ += cycles;
@@ -41,6 +43,7 @@ auto GameBoy::TickDevices(const std::uint32_t elapsed) -> void {
 
     bus_.Tick(elapsed);
     ppu_.Step(elapsed);
+    apu_.Tick(elapsed);
 }
 
 auto GameBoy::SetButton(
@@ -99,6 +102,14 @@ auto GameBoy::GetJoypad() noexcept -> Joypad& {
 
 auto GameBoy::GetJoypad() const noexcept -> const Joypad& {
     return joypad_;
+}
+
+auto GameBoy::GetAPU() noexcept -> APU& {
+    return apu_;
+}
+
+auto GameBoy::GetAPU() const noexcept -> const APU& {
+    return apu_;
 }
 
 } // namespace PixelLink::GameBoy

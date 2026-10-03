@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstring>
 #include <limits>
+#include <vector>
 
 namespace PixelLink::Frontend {
 
@@ -51,6 +52,37 @@ bool Emulator::RunFrame()
     }
 
     frameCycleRemainder_ -= T_CYCLES_PER_FRAME;
+
+    if (audioStream_ != nullptr) {
+        auto samples = gameBoy_.GetAPU().TakeSamples();
+        if (!samples.empty()) {
+            // Avoid a growing backlog after the host pauses or falls behind.
+            const int queued = SDL_GetAudioStreamQueued(audioStream_);
+            if (queued < 0) {
+                return false;
+            }
+            const int maxQueued = audioSampleRate_ * audioChannels_ *
+                static_cast<int>(sizeof(float)) / 4;
+            if (queued > maxQueued && !SDL_ClearAudioStream(audioStream_)) {
+                return false;
+            }
+
+            if (audioChannels_ == 2) {
+                if (!PushAudio(samples)) {
+                    return false;
+                }
+            } else {
+                std::vector<float> mono;
+                mono.reserve(samples.size() / 2);
+                for (std::size_t i = 0; i < samples.size(); i += 2) {
+                    mono.push_back((samples[i] + samples[i + 1]) * 0.5f);
+                }
+                if (!PushAudio(mono)) {
+                    return false;
+                }
+            }
+        }
+    }
 
     // Running the core does not require SDL. If no renderer is attached,
     // the frame is still considered successfully emulated.
@@ -220,11 +252,16 @@ bool Emulator::InitializeAudio(
     const AudioConfig& config
 ) noexcept
 {
-    if (config.sampleRate <= 0 || config.channels <= 0) {
+    if ((config.channels != 1 && config.channels != 2) ||
+        config.sampleRate < 8'000 || config.sampleRate > 192'000) {
         return false;
     }
 
     ShutdownAudio();
+    if (!gameBoy_.GetAPU().SetSampleRate(
+            static_cast<std::uint32_t>(config.sampleRate))) {
+        return false;
+    }
 
     SDL_AudioSpec specification{};
     specification.format = SDL_AUDIO_F32;
@@ -249,17 +286,21 @@ bool Emulator::InitializeAudio(
     }
 
     audioChannels_ = config.channels;
+    audioSampleRate_ = config.sampleRate;
+    gameBoy_.GetAPU().SetSampleCaptureEnabled(true);
     return true;
 }
 
 void Emulator::ShutdownAudio() noexcept
 {
+    gameBoy_.GetAPU().SetSampleCaptureEnabled(false);
     if (audioStream_ != nullptr) {
         SDL_DestroyAudioStream(audioStream_);
         audioStream_ = nullptr;
     }
 
     audioChannels_ = 0;
+    audioSampleRate_ = 0;
 }
 
 bool Emulator::PushAudio(

@@ -116,8 +116,9 @@
    - [ ] Broader hardware accuracy suite (PPU, timer, DMA, serial)
 
 13. APU
-   - [ ] Audio channels
-   - [ ] SDL Audio
+   - [x] Four audio channels: CH1 sweep, CH2 pulse, CH3 wave, CH4 noise
+   - [x] Stereo mixer and SDL Audio playback
+   - [ ] Advanced APU accuracy (DIV sync, wave RAM access, trigger quirks)
 
 ## Stage 2: WLAN Remote Controlling
 

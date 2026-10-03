@@ -2,6 +2,7 @@
 
 #include <filesystem>
 
+#include <PixelLink/GameBoy/APU.hpp>
 #include <PixelLink/GameBoy/Bus.hpp>
 #include <PixelLink/GameBoy/CPU.hpp>
 #include <PixelLink/GameBoy/Cartridge.hpp>
@@ -42,6 +43,9 @@ public:
     [[nodiscard]] auto GetJoypad() noexcept -> Joypad&;
     [[nodiscard]] auto GetJoypad() const noexcept -> const Joypad&;
 
+    [[nodiscard]] auto GetAPU() noexcept -> APU&;
+    [[nodiscard]] auto GetAPU() const noexcept -> const APU&;
+
     GameBoy(const GameBoy&) = delete;
     GameBoy& operator=(const GameBoy&) = delete;
 
@@ -55,6 +59,7 @@ private:
     Cartridge cartridge_;
     Timer timer_;
     Joypad joypad_;
+    APU apu_;
     Bus bus_;
     PPU ppu_;
     CPU cpu_;

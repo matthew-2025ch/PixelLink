@@ -26,7 +26,7 @@ constexpr int WINDOW_HEIGHT =
 
 const std::filesystem::path ROM_PATH =
     std::filesystem::path(PIXELLINK_PROJECT_DIR) /
-    LR"(assests/games/Super Breakout! (Europe) (En,Fr,De,Es,It,Nl) (GB Compatible).gbc)";
+    LR"(assests/roms/Super Breakout! (Europe) (En,Fr,De,Es,It,Nl) (GB Compatible).gbc)";
 
 constexpr double FRAME_SECONDS =
     70'224.0 / 4'194'304.0;
@@ -46,7 +46,7 @@ using RendererPtr =
 class SDLGuard {
 public:
     SDLGuard() {
-        if (!SDL_Init(SDL_INIT_VIDEO)) {
+        if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
             throw std::runtime_error(
                 std::format(
                     "SDL_Init failed: {}",
@@ -118,6 +118,10 @@ void testRunROM() {
     }
 
     emulator.LoadROM(ROM_PATH);
+    if (!emulator.InitializeAudio()) {
+        throw std::runtime_error(
+            std::format("Emulator::InitializeAudio failed: {}", SDL_GetError()));
+    }
 
     const SDL_FRect gameArea{
         0.0f,

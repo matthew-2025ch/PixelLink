@@ -7,6 +7,7 @@
 namespace PixelLink::GameBoy {
 
 class Cartridge;
+class APU;
 class Joypad;
 class PPU;
 class Timer;
@@ -32,6 +33,9 @@ public:
 
     auto AttachTimer(Timer& timer) noexcept -> void;
     auto DetachTimer(const Timer& timer) noexcept -> void;
+
+    auto AttachAPU(APU& apu) noexcept -> void;
+    auto DetachAPU(const APU& apu) noexcept -> void;
 
     auto AttachJoypad(Joypad& joypad) noexcept -> void;
     auto DetachJoypad(const Joypad& joypad) noexcept -> void;
@@ -71,6 +75,7 @@ private:
     Cartridge* cartridge_ = nullptr;
     PPU* ppu_ = nullptr;
     Timer* timer_ = nullptr;
+    APU* apu_ = nullptr;
     Joypad* joypad_ = nullptr;
 
     // Used only when no cartridge is inserted.

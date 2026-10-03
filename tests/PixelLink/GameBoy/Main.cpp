@@ -11,6 +11,7 @@ int main() {
             << " Game Boy Core Tests\n"
             << "==============================\n\n";
 
+        APUTest::run();
         BusTest::run();
         CartridgeTest::run();
         CPUTest::run();

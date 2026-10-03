@@ -1,3 +1,4 @@
+#include <PixelLink/GameBoy/APU.hpp>
 #include <PixelLink/GameBoy/Bus.hpp>
 #include <PixelLink/GameBoy/Cartridge.hpp>
 #include <PixelLink/GameBoy/Joypad.hpp>
@@ -7,6 +8,12 @@
 #include <algorithm>
 
 namespace PixelLink::GameBoy {
+
+namespace {
+auto IsImplementedAPURegister(const std::uint16_t address) noexcept -> bool {
+    return 0xFF10 <= address && address <= 0xFF3F;
+}
+} // namespace
 
 Bus::Bus() {
     InitializePostBootState();
@@ -44,6 +51,16 @@ auto Bus::AttachTimer(Timer& timer) noexcept -> void {
 auto Bus::DetachTimer(const Timer& timer) noexcept -> void {
     if (timer_ == &timer) {
         timer_ = nullptr;
+    }
+}
+
+auto Bus::AttachAPU(APU& apu) noexcept -> void {
+    apu_ = &apu;
+}
+
+auto Bus::DetachAPU(const APU& apu) noexcept -> void {
+    if (apu_ == &apu) {
+        apu_ = nullptr;
     }
 }
 
@@ -130,6 +147,10 @@ auto Bus::Read(
         }
 
         return 0xFF;
+    }
+
+    if (apu_ != nullptr && IsImplementedAPURegister(address)) {
+        return apu_->Read(address);
     }
 
     // I/O registers
@@ -235,6 +256,11 @@ auto Bus::Write(
             timer_->Write(address, value);
         }
 
+        return;
+    }
+
+    if (apu_ != nullptr && IsImplementedAPURegister(address)) {
+        apu_->Write(address, value);
         return;
     }
 
