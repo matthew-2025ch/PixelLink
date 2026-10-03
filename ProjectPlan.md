@@ -110,9 +110,10 @@
    - [x] Save files
 
 12. Accuracy
-   - [ ] Test ROMs
-   - [ ] HALT bug
-   - [ ] Timing edge cases
+   - [x] Test ROM runner and initial Mooneye acceptance tests
+   - [x] HALT bug
+   - [x] HALT, timer read, and OAM DMA boundary timing regressions
+   - [ ] Broader hardware accuracy suite (PPU, timer, DMA, serial)
 
 13. APU
    - [ ] Audio channels

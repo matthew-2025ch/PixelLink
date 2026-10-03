@@ -21,6 +21,10 @@ auto CPU::AdvanceCycles(const std::uint32_t cycles) -> void {
     }
 }
 
+auto CPU::GetRegisterSnapshot() const noexcept -> RegisterSnapshot {
+    return {A, F, B, C, D, E, H, L, PC};
+}
+
 auto CPU::Reset() -> void {
     A = 0x01;
     F = 0xB0;
@@ -35,6 +39,7 @@ auto CPU::Reset() -> void {
     ime = false;
     imeEnableDelay = 0;
     halted = false;
+    haltBugPending = false;
 }
 
 auto CPU::Step() -> int {
@@ -53,7 +58,7 @@ auto CPU::Step() -> int {
         return 4;
     }
 
-    const int cycles = Execute(Fetch8());
+    const int cycles = Execute(FetchOpcode());
 
     UpdateIME();
 
@@ -62,6 +67,14 @@ auto CPU::Step() -> int {
 
 auto CPU::Fetch8() -> uint8_t {
     return bus.Read(PC++);
+}
+
+auto CPU::FetchOpcode() -> uint8_t {
+    if (haltBugPending) {
+        haltBugPending = false;
+        return bus.Read(PC);
+    }
+    return Fetch8();
 }
 
 auto CPU::Fetch16() -> uint16_t {
@@ -357,7 +370,13 @@ auto CPU::Execute(uint8_t opcode) -> int {
     // 0x40..0x7F: LD r8,r8 (0x76 is HALT)
     if (opcode >= 0x40 && opcode <= 0x7F) {
         if (opcode == 0x76) {
-            halted = true;
+            if (!ime && PendingInterrupts() != 0) {
+                // With IME off and an interrupt already pending, HALT
+                // suppresses the next opcode fetch's PC increment.
+                haltBugPending = true;
+            } else {
+                halted = true;
+            }
             return 4;
         }
         const uint8_t dst = static_cast<uint8_t>((opcode >> 3) & 0x07);
@@ -555,13 +574,25 @@ auto CPU::Execute(uint8_t opcode) -> int {
     case 0xDE: SubA(Fetch8(), true); return 8;
     case 0xDF: return Restart(0x18);
 
-    case 0xE0: bus.Write(static_cast<uint16_t>(0xFF00u + Fetch8()), A); return 12;
+    case 0xE0: {
+        const auto offset = Fetch8();
+        // The write occurs in the third machine cycle, after both fetches.
+        AdvanceCycles(8);
+        bus.Write(static_cast<uint16_t>(0xFF00u + offset), A);
+        return 12;
+    }
     case 0xE1: SetHL(Pop16()); return 12;
     case 0xE2: bus.Write(static_cast<uint16_t>(0xFF00u + C), A); return 8;
     case 0xE5: Push16(GetHL()); return 16;
     case 0xE6: AndA(Fetch8()); return 8;
     case 0xE7: return Restart(0x20);
-    case 0xE8: { const int8_t e = static_cast<int8_t>(Fetch8()); SP = AddSignedToSP(e); return 16; }
+    case 0xE8: {
+        // The signed operand is fetched in the second machine cycle.
+        AdvanceCycles(4);
+        const auto offset = static_cast<std::int8_t>(Fetch8());
+        SP = AddSignedToSP(offset);
+        return 16;
+    }
     case 0xE9: PC = GetHL(); return 4;
     case 0xEA: { const uint16_t address = Fetch16(); bus.Write(address, A); return 16; }
     case 0xEE: XorA(Fetch8()); return 8;
@@ -586,7 +617,12 @@ auto CPU::Execute(uint8_t opcode) -> int {
     case 0xF5: Push16(static_cast<uint16_t>((static_cast<uint16_t>(A) << 8) | (F & 0xF0))); return 16;
     case 0xF6: OrA(Fetch8()); return 8;
     case 0xF7: return Restart(0x30);
-    case 0xF8: { const int8_t e = static_cast<int8_t>(Fetch8()); SetHL(AddSignedToSP(e)); return 12; }
+    case 0xF8: {
+        AdvanceCycles(4);
+        const auto offset = static_cast<std::int8_t>(Fetch8());
+        SetHL(AddSignedToSP(offset));
+        return 12;
+    }
     case 0xF9: SP = GetHL(); return 8;
     case 0xFA: A = bus.Read(Fetch16()); return 16;
     case 0xFB: if (!ime && imeEnableDelay == 0) { imeEnableDelay = 2; } return 4;

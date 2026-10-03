@@ -11,11 +11,17 @@ class Bus;
 
 class CPU {
 public:
+    struct RegisterSnapshot {
+        std::uint8_t a, f, b, c, d, e, h, l;
+        std::uint16_t pc;
+    };
+
     explicit CPU(Bus& bus);
 
     auto Reset() -> void;
     auto Step() -> int;
     auto SetCycleCallback(std::function<void(std::uint32_t)> callback) -> void;
+    [[nodiscard]] auto GetRegisterSnapshot() const noexcept -> RegisterSnapshot;
 
 #ifndef _DEBUG
 private:
@@ -32,6 +38,7 @@ private:
     uint16_t PC = 0x0100;
     bool ime = false;
     bool halted = false;
+    bool haltBugPending = false;
     uint8_t imeEnableDelay = 0;
 
 #ifdef _DEBUG
@@ -50,6 +57,7 @@ private:
     auto AdvanceCycles(std::uint32_t cycles) -> void;
 
     auto Fetch8() -> uint8_t;
+    auto FetchOpcode() -> uint8_t;
     auto Fetch16() -> uint16_t;
     auto Execute(uint8_t opcode) -> int;
     auto ExecuteCB(uint8_t opcode) -> int;

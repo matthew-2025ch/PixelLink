@@ -54,6 +54,7 @@ ipch/
 *.gbc
 *.sav
 *.rtc
+!assests/roms/mooneye/acceptance/*.gb
 
 # Temporary files
 *.tmp

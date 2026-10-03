@@ -149,6 +149,49 @@ void testHaltWakeWithoutIME() {
     CHECK((bus.Read(IF) & 0x01) != 0);
 }
 
+void testHaltBugRepeatsSingleByteOpcode() {
+    Bus bus;
+    CPU cpu(bus);
+
+    Test::Load(bus, 0x0100, {
+        0x76, // HALT with IME off and VBlank pending
+        0x04, // INC B: fetched twice
+        0x00
+    });
+    bus.Write(IE, 0x01);
+    bus.Write(IF, 0x01);
+
+    CHECK(cpu.Step() == 4);
+    CHECK(!cpu.halted);
+    CHECK(cpu.PC == 0x0101);
+
+    CHECK(cpu.Step() == 4);
+    CHECK(cpu.B == 1);
+    CHECK(cpu.PC == 0x0101);
+
+    CHECK(cpu.Step() == 4);
+    CHECK(cpu.B == 2);
+    CHECK(cpu.PC == 0x0102);
+}
+
+void testHaltBugRepeatsFirstByteOfOperand() {
+    Bus bus;
+    CPU cpu(bus);
+
+    Test::Load(bus, 0x0100, {
+        0x76,       // HALT with pending interrupt
+        0x3E, 0x42, // LD A,0x42; opcode becomes its own operand
+        0x00
+    });
+    bus.Write(IE, 0x01);
+    bus.Write(IF, 0x01);
+
+    CHECK(cpu.Step() == 4);
+    CHECK(cpu.Step() == 8);
+    CHECK(cpu.A == 0x3E);
+    CHECK(cpu.PC == 0x0102);
+}
+
 void testDICancelsEI() {
     Bus bus;
     CPU cpu(bus);
@@ -252,6 +295,8 @@ void run() {
     Test::run("Interrupt / priority", testInterruptPriority);
     Test::run("Interrupt / IME disabled", testInterruptWaitsWhenIMEDisabled);
     Test::run("Interrupt / HALT wake-up", testHaltWakeWithoutIME);
+    Test::run("Interrupt / HALT bug single-byte", testHaltBugRepeatsSingleByteOpcode);
+    Test::run("Interrupt / HALT bug operand", testHaltBugRepeatsFirstByteOfOperand);
     Test::run("Interrupt / DI cancels EI", testDICancelsEI);
     Test::run("Interrupt / RETI", testRETI);
     Test::run("Interrupt / vectors", testInterruptVectors);

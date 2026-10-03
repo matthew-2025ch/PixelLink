@@ -87,6 +87,8 @@ private:
     std::uint16_t oamDMASourceBase_ = 0;
     std::size_t oamDMAByteIndex_ = 0;
     std::uint32_t oamDMATCycleAccumulator_ = 0;
+    std::uint32_t oamDMAStartupCyclesRemaining_ = 0;
+    std::uint32_t oamDMAReleaseCyclesRemaining_ = 0;
 
     [[nodiscard]] static auto IsHRAMAddress(
         std::uint16_t address

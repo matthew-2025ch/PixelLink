@@ -228,6 +228,11 @@ void testOAMDMATransfer() {
     bus.Tick(4);
 
     CHECK(bus.IsOAMDMAActive());
+    CHECK(bus.GetOAMDMABytesTransferred() == 0);
+
+    bus.Tick(4);
+
+    CHECK(bus.IsOAMDMAActive());
     CHECK(bus.GetOAMDMABytesTransferred() == 1);
 
     CHECK(
@@ -236,6 +241,10 @@ void testOAMDMATransfer() {
     );
 
     bus.Tick(636);
+
+    CHECK(bus.IsOAMDMAActive());
+    CHECK(bus.GetOAMDMABytesTransferred() == 0x00A0);
+    bus.Tick(1);
 
     CHECK(!bus.IsOAMDMAActive());
     CHECK(bus.GetOAMDMABytesTransferred() == 0x00A0);
@@ -259,8 +268,10 @@ void testOAMDMACPUTimingRestriction() {
     bus.Write(0xFF46, 0xC0);
 
     CHECK(bus.IsOAMDMAActive());
+    CHECK(bus.Read(0xC000) == 0x12);
+    bus.Tick(4);
 
-    // During DMG OAM DMA, the CPU can access HRAM only.
+    // During an external-bus DMA transfer, the CPU can access HRAM only.
     CHECK(bus.Read(0xC000) == 0xFF);
     CHECK(bus.Read(0xFF80) == 0x34);
 
@@ -269,12 +280,30 @@ void testOAMDMACPUTimingRestriction() {
 
     CHECK(bus.Read(0xFF80) == 0x56);
 
-    bus.Tick(640);
+    bus.Tick(641);
 
     CHECK(!bus.IsOAMDMAActive());
 
     // The blocked WRAM write must not have happened.
     CHECK(bus.Read(0xC000) == 0x12);
+}
+
+void testOAMDMAVideoBusRestriction() {
+    Bus bus;
+
+    bus.Write(0x8000, 0x12);
+    bus.Write(0xC000, 0x34);
+    bus.Write(0xFE00, 0x56);
+    bus.Write(0xFF46, 0x80);
+    CHECK(bus.Read(0x8000) == 0x12);
+    bus.Tick(4);
+
+    CHECK(bus.Read(0x8000) == 0xFF);
+    CHECK(bus.Read(0xC000) == 0x34);
+    CHECK(bus.Read(0xFE00) == 0xFF);
+
+    bus.Write(0xC000, 0x78);
+    CHECK(bus.Read(0xC000) == 0x78);
 }
 
 void testOAMDMARestart() {
@@ -293,7 +322,7 @@ void testOAMDMARestart() {
     }
 
     bus.Write(0xFF46, 0xC0);
-    bus.Tick(40);
+    bus.Tick(44);
 
     CHECK(bus.GetOAMDMABytesTransferred() == 10);
 
@@ -303,7 +332,7 @@ void testOAMDMARestart() {
     CHECK(bus.IsOAMDMAActive());
     CHECK(bus.GetOAMDMABytesTransferred() == 0);
 
-    bus.Tick(640);
+    bus.Tick(645);
 
     CHECK(!bus.IsOAMDMAActive());
 
@@ -339,6 +368,7 @@ void run() {
         "DMA / CPU HRAM-only restriction",
         testOAMDMACPUTimingRestriction
     );
+    Test::run("DMA / video bus restriction", testOAMDMAVideoBusRestriction);
     Test::run("DMA / restart", testOAMDMARestart);
 }
 

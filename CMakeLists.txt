@@ -97,6 +97,7 @@ add_executable(GameBoyTests
     tests/PixelLink/GameBoy/MBC3Test.cpp
     tests/PixelLink/GameBoy/MBC5Test.cpp
     tests/PixelLink/GameBoy/PPUTest.cpp
+    tests/PixelLink/GameBoy/ROMTest.cpp
     tests/PixelLink/GameBoy/RTCTest.cpp
     tests/PixelLink/GameBoy/SaveTest.cpp
     tests/PixelLink/GameBoy/TimerIntegrationTest.cpp
@@ -106,6 +107,11 @@ add_executable(GameBoyTests
 target_link_libraries(GameBoyTests
     PRIVATE
         PixelLink::GameBoy
+)
+
+target_compile_definitions(GameBoyTests
+    PRIVATE
+        PIXELLINK_PROJECT_DIR="${CMAKE_SOURCE_DIR}"
 )
 
 add_test(

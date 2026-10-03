@@ -22,6 +22,7 @@ int main() {
         MBC3Test::run();
         MBC5Test::run();
         PPUTest::run();
+        ROMTest::run();
         RTCTest::run();
         SaveTest::run();
         TimerIntegrationTest::run();

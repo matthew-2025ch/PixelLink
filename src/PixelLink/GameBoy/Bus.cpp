@@ -4,6 +4,8 @@
 #include <PixelLink/GameBoy/PPU.hpp>
 #include <PixelLink/GameBoy/Timer.hpp>
 
+#include <algorithm>
+
 namespace PixelLink::GameBoy {
 
 Bus::Bus() {
@@ -286,13 +288,20 @@ auto Bus::IsHRAMAddress(
 auto Bus::IsCPUAccessBlockedByDMA(
     const std::uint16_t address
 ) const noexcept -> bool {
-    if (!oamDMAActive_) {
+    if (!oamDMAActive_ || oamDMAStartupCyclesRemaining_ != 0) {
         return false;
     }
 
-    // DMG behavior: while OAM DMA is active, CPU accesses are
-    // restricted to HRAM. FF46 writes are handled before this check
-    // so that an active transfer can be restarted.
+    // A VRAM-sourced transfer occupies the video bus and OAM, but the
+    // CPU can still fetch instructions from WRAM. This matters when an
+    // instruction straddles FDFF/FE00 during the final DMA cycle.
+    if (0x8000 <= oamDMASourceBase_ && oamDMASourceBase_ <= 0x9FFF) {
+        return (0x8000 <= address && address <= 0x9FFF) ||
+               (0xFE00 <= address && address <= 0xFE9F);
+    }
+
+    // An external-bus transfer blocks normal CPU accesses except HRAM.
+    // FF46 writes are handled before this check so DMA can be restarted.
     return !IsHRAMAddress(address);
 }
 
@@ -347,6 +356,8 @@ auto Bus::StartOAMDMA(
         static_cast<std::uint16_t>(sourceHigh) << 8u;
     oamDMAByteIndex_ = 0;
     oamDMATCycleAccumulator_ = 0;
+    oamDMAStartupCyclesRemaining_ = 4;
+    oamDMAReleaseCyclesRemaining_ = 0;
 }
 
 auto Bus::TickOAMDMA(
@@ -356,7 +367,24 @@ auto Bus::TickOAMDMA(
         return;
     }
 
-    oamDMATCycleAccumulator_ += tCycles;
+    if (oamDMAReleaseCyclesRemaining_ != 0) {
+        if (tCycles >= oamDMAReleaseCyclesRemaining_) {
+            oamDMAReleaseCyclesRemaining_ = 0;
+            oamDMAActive_ = false;
+        } else {
+            oamDMAReleaseCyclesRemaining_ -= tCycles;
+        }
+        return;
+    }
+
+    auto transferCycles = tCycles;
+    if (oamDMAStartupCyclesRemaining_ != 0) {
+        const auto startupCycles = std::min(
+            transferCycles, oamDMAStartupCyclesRemaining_);
+        oamDMAStartupCyclesRemaining_ -= startupCycles;
+        transferCycles -= startupCycles;
+    }
+    oamDMATCycleAccumulator_ += transferCycles;
 
     while (
         oamDMAActive_ &&
@@ -394,8 +422,15 @@ auto Bus::TickOAMDMA(
         ++oamDMAByteIndex_;
 
         if (oamDMAByteIndex_ >= OAM_DMA_BYTES) {
-            oamDMAActive_ = false;
+            // The bus remains claimed through the last transfer edge.
+            oamDMAReleaseCyclesRemaining_ = 1;
+            if (oamDMATCycleAccumulator_ >= oamDMAReleaseCyclesRemaining_) {
+                oamDMATCycleAccumulator_ -= oamDMAReleaseCyclesRemaining_;
+                oamDMAReleaseCyclesRemaining_ = 0;
+                oamDMAActive_ = false;
+            }
             oamDMATCycleAccumulator_ = 0;
+            break;
         }
     }
 }

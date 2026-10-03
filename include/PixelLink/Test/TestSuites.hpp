@@ -48,6 +48,10 @@ namespace GameBoy{
         void run();
     }
 
+    namespace ROMTest {
+        void run();
+    }
+
     namespace RTCTest {
         void run();
     }
