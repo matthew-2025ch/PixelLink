@@ -21,6 +21,9 @@ PPU::~PPU() {
 
 void PPU::Reset() {
     lineDot_ = 0;
+    physicalLine_ = 0;
+    firstLineAfterEnable_ = false;
+    drawingEnd_ = DRAWING_END;
     windowLine_ = 0;
     statInterruptLine_ = false;
 
@@ -64,17 +67,34 @@ const PPU::Framebuffer& PPU::GetFramebuffer() const noexcept {
     return framebuffer_;
 }
 
-bool PPU::CanCPUAccessVRAM() const noexcept {
+bool PPU::CanCPUAccessVRAM(const bool write) const noexcept {
     if (!IsLCDEnabled()) {
         return true;
     }
 
-    // VRAM is blocked only during Mode 3.
+    // On ordinary lines the read port closes two dots before the STAT
+    // Mode 3 transition. Writes close at the mode transition itself.
+    if (!write && !firstLineAfterEnable_ && physicalLine_ < VISIBLE_LINES &&
+        lineDot_ >= OAM_SCAN_END - 2 && lineDot_ < OAM_SCAN_END) {
+        return false;
+    }
     return mode_ != Mode::Drawing;
 }
 
-bool PPU::CanCPUAccessOAM() const noexcept {
+bool PPU::CanCPUAccessOAM(const bool write) const noexcept {
     if (!IsLCDEnabled()) {
+        return true;
+    }
+
+    if (!write && physicalLine_ < VISIBLE_LINES &&
+        !firstLineAfterEnable_ && lineDot_ < 4) {
+        return false;
+    }
+
+    // The OAM write gate briefly opens at the end of the search, before
+    // STAT reports Mode 3. The OAM read port remains closed throughout.
+    if (write && mode_ == Mode::OAMScan &&
+        lineDot_ >= OAM_SCAN_END - 2 && lineDot_ < OAM_SCAN_END) {
         return true;
     }
 
@@ -100,60 +120,109 @@ void PPU::WriteBus(
     bus_.Write(address, value, BusAccess::PPU);
 }
 
-void PPU::StepOneDot() {
-    if (!IsLCDEnabled()) {
+void PPU::OnRegisterWrite(const std::uint16_t address, const std::uint8_t oldValue) {
+    if (address == LCDC && ((oldValue ^ ReadBus(LCDC)) & 0x80) != 0) {
         lineDot_ = 0;
+        physicalLine_ = 0;
+        ly_ = 0;
+        WriteBus(LY, 0);
         windowLine_ = 0;
-
-        SetLY(0);
-        SetMode(Mode::HBlank);
-        UpdateSTAT();
-        return;
+        mode_ = Mode::HBlank;
+        firstLineAfterEnable_ = IsLCDEnabled();
     }
+    UpdateSTAT();
+}
 
-    // Start a fresh scanline when the LCD has just been enabled.
-    if (mode_ == Mode::HBlank && ly_ == 0 && lineDot_ == 0) {
-        SetMode(Mode::OAMScan);
+std::uint16_t PPU::TransferPenalty() const {
+    const auto lcdc = ReadBus(LCDC);
+    const int scx = ReadBus(SCX) & 7;
+    int penalty = scx;
+    bool fetchedObject = false;
+    const bool windowVisible = (lcdc & 0x21) == 0x21 &&
+        ly_ >= ReadBus(WY) && ReadBus(WX) <= 166;
+    if (windowVisible) {
+        penalty += 6;
     }
-
-    ++lineDot_;
-
-    if (ly_ < VISIBLE_LINES) {
-        if (lineDot_ == OAM_SCAN_END) {
-            SetMode(Mode::Drawing);
-        } else if (lineDot_ == DRAWING_END) {
-            // Parts 2-4 still use fixed Mode 3 timing.
-            // The whole scanline is rendered when pixel transfer completes.
-            RenderScanline();
-            SetMode(Mode::HBlank);
+    if ((lcdc & 2) != 0) {
+        std::array<int, MAX_SPRITES_PER_LINE> positions{};
+        std::size_t count = 0;
+        const int height = (lcdc & 4) != 0 ? 16 : 8;
+        for (std::size_t i = 0; i < OAM_SPRITE_COUNT && count < positions.size(); ++i) {
+            const auto address = static_cast<std::uint16_t>(OAM_BASE + 4 * i);
+            const int top = static_cast<int>(ReadBus(address)) - 16;
+            if (ly_ >= top && ly_ < top + height) {
+                positions[count++] = ReadBus(address + 1);
+            }
         }
-    }
-
-    if (lineDot_ >= DOTS_PER_LINE) {
-        lineDot_ = 0;
-
-        const std::uint8_t nextLY =
-            static_cast<std::uint8_t>(ly_ + 1u);
-
-        if (nextLY == VISIBLE_LINES) {
-            SetLY(nextLY);
-            SetMode(Mode::VBlank);
-            RequestVBlankInterrupt();
-        } else if (nextLY >= TOTAL_LINES) {
-            SetLY(0);
-            windowLine_ = 0;
-            SetMode(Mode::OAMScan);
-        } else {
-            SetLY(nextLY);
-
-            if (ly_ < VISIBLE_LINES) {
-                SetMode(Mode::OAMScan);
-            } else {
-                SetMode(Mode::VBlank);
+        std::sort(positions.begin(), positions.begin() + count);
+        int previousTile = -100;
+        for (std::size_t i = 0; i < count; ++i) {
+            const int x = positions[i];
+            if (x >= 168) {
+                continue;
+            }
+            const int pixel = x + scx;
+            const int tile = pixel / 8;
+            penalty += 6; // every selected object needs its tile fetch
+            fetchedObject = true;
+            if (tile != previousTile) {
+                penalty += std::max(5 - (pixel & 7), 0);
+                previousTile = tile;
             }
         }
     }
+    if (fetchedObject) {
+        // Resuming pixel output overlaps the final object fetch dot.
+        --penalty;
+    }
+    return static_cast<std::uint16_t>(penalty);
+}
 
+void PPU::StepOneDot() {
+    if (!IsLCDEnabled()) {
+        return; // the coincidence flag and STAT line freeze with the LCD clock
+    }
+    ++lineDot_;
+    if (physicalLine_ < VISIBLE_LINES) {
+        if (!firstLineAfterEnable_ && lineDot_ == 4) {
+            mode_ = Mode::OAMScan;
+        }
+        const auto mode3Start = firstLineAfterEnable_ ? 78 : OAM_SCAN_END;
+        if (lineDot_ == mode3Start) {
+            drawingEnd_ = static_cast<std::uint16_t>(
+                mode3Start + 172 + TransferPenalty());
+            mode_ = Mode::Drawing;
+        } else if (lineDot_ == drawingEnd_ && mode_ == Mode::Drawing) {
+            RenderScanline();
+            mode_ = Mode::HBlank;
+        }
+    }
+    if (physicalLine_ == VISIBLE_LINES && lineDot_ == 4) {
+        mode_ = Mode::VBlank;
+        RequestVBlankInterrupt();
+    }
+    // LY becomes zero at dot 4 of the final VBlank line, but Mode 1
+    // continues until the physical end of line 153.
+    if (physicalLine_ == 153 && lineDot_ == 4) {
+        ly_ = 0;
+        WriteBus(LY, 0);
+    }
+    const auto lineLength = firstLineAfterEnable_ ? 450 : DOTS_PER_LINE;
+    if (lineDot_ >= lineLength) {
+        lineDot_ = 0;
+        firstLineAfterEnable_ = false;
+        physicalLine_ = static_cast<std::uint8_t>((physicalLine_ + 1) % TOTAL_LINES);
+        ly_ = physicalLine_;
+        WriteBus(LY, ly_);
+        if (physicalLine_ == 0) {
+            windowLine_ = 0;
+        }
+        if (physicalLine_ > VISIBLE_LINES) {
+            mode_ = Mode::VBlank;
+        } else {
+            mode_ = Mode::HBlank;
+        }
+    }
     UpdateSTAT();
 }
 
@@ -175,7 +244,7 @@ void PPU::UpdateSTAT() {
     // Bit 7 reads as 1 on DMG.
     // Bits 0-2 are produced by the PPU.
     std::uint8_t stat = static_cast<std::uint8_t>(
-        (ReadBus(STAT) & 0x78u) | 0x80u
+        (ReadBus(STAT) & (lcdEnabled ? 0x78u : 0x7Cu)) | 0x80u
     );
 
     if (lcdEnabled) {
@@ -184,7 +253,9 @@ void PPU::UpdateSTAT() {
             static_cast<std::uint8_t>(mode_)
         );
 
-        if (ly_ == ReadBus(LYC)) {
+        const bool comparisonRunning = firstLineAfterEnable_ ||
+            physicalLine_ >= VISIBLE_LINES || lineDot_ >= 4;
+        if (comparisonRunning && ly_ == ReadBus(LYC)) {
             stat = static_cast<std::uint8_t>(
                 stat | 0x04u
             );
@@ -196,6 +267,9 @@ void PPU::UpdateSTAT() {
 }
 
 void PPU::UpdateSTATInterruptLine() {
+    if (!IsLCDEnabled()) {
+        return;
+    }
     bool interruptLine = false;
 
     if (IsLCDEnabled()) {
@@ -207,7 +281,8 @@ void PPU::UpdateSTATInterruptLine() {
 
         const bool mode2Source =
             (stat & 0x20u) != 0 &&
-            mode_ == Mode::OAMScan;
+            (mode_ == Mode::OAMScan ||
+             (physicalLine_ == 144 && lineDot_ == 4));
 
         const bool mode1Source =
             (stat & 0x10u) != 0 &&

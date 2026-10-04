@@ -4,6 +4,7 @@
 #include <PixelLink/GameBoy/Joypad.hpp>
 #include <PixelLink/GameBoy/PPU.hpp>
 #include <PixelLink/GameBoy/Timer.hpp>
+#include <PixelLink/GameBoy/Serial.hpp>
 
 #include <algorithm>
 
@@ -58,6 +59,16 @@ auto Bus::AttachAPU(APU& apu) noexcept -> void {
     apu_ = &apu;
 }
 
+auto Bus::AttachSerial(Serial& serial) noexcept -> void {
+    serial_ = &serial;
+}
+
+auto Bus::DetachSerial(const Serial& serial) noexcept -> void {
+    if (serial_ == &serial) {
+        serial_ = nullptr;
+    }
+}
+
 auto Bus::DetachAPU(const APU& apu) noexcept -> void {
     if (apu_ == &apu) {
         apu_ = nullptr;
@@ -78,6 +89,10 @@ auto Bus::Read(
     const std::uint16_t address,
     const BusAccess access
 ) const -> std::uint8_t {
+    // FF46 always returns the last written value, even during OAM DMA.
+    if (address == DMA_REGISTER) {
+        return io_[DMA_REGISTER - 0xFF00];
+    }
     if (access == BusAccess::CPU) {
         if (IsCPUAccessBlockedByDMA(address)) {
             return 0xFF;
@@ -140,6 +155,10 @@ auto Bus::Read(
         return 0xFF;
     }
 
+    if (serial_ != nullptr && (address == 0xFF01 || address == 0xFF02)) {
+        return serial_->Read(address);
+    }
+
     // Timer registers
     if (0xFF04 <= address && address <= 0xFF07) {
         if (timer_ != nullptr) {
@@ -186,7 +205,7 @@ auto Bus::Write(
             return;
         }
 
-        if (IsCPUAccessBlockedByPPU(address)) {
+        if (IsCPUAccessBlockedByPPU(address, true)) {
             return;
         }
     }
@@ -250,6 +269,11 @@ auto Bus::Write(
         return;
     }
 
+    if (serial_ != nullptr && (address == 0xFF01 || address == 0xFF02)) {
+        serial_->Write(address, value);
+        return;
+    }
+
     // Timer registers
     if (0xFF04 <= address && address <= 0xFF07) {
         if (timer_ != nullptr) {
@@ -266,6 +290,19 @@ auto Bus::Write(
 
     // I/O registers
     if (address <= 0xFF7F) {
+        if (access == BusAccess::CPU && ppu_ != nullptr) {
+            if (address == 0xFF44) {
+                return; // LY is read-only.
+            }
+            if (address == 0xFF40 || address == 0xFF41 || address == 0xFF45) {
+                const auto oldValue = io_[address - 0xFF00];
+                io_[address - 0xFF00] = address == 0xFF41
+                    ? static_cast<std::uint8_t>((value & 0x78) | (oldValue & 7) | 0x80)
+                    : value;
+                ppu_->OnRegisterWrite(address, oldValue);
+                return;
+            }
+        }
         io_[address - 0xFF00] = value;
         return;
     }
@@ -314,7 +351,7 @@ auto Bus::IsHRAMAddress(
 auto Bus::IsCPUAccessBlockedByDMA(
     const std::uint16_t address
 ) const noexcept -> bool {
-    if (!oamDMAActive_ || oamDMAStartupCyclesRemaining_ != 0) {
+    if (!oamDMATransferRunning_) {
         return false;
     }
 
@@ -332,18 +369,18 @@ auto Bus::IsCPUAccessBlockedByDMA(
 }
 
 auto Bus::IsCPUAccessBlockedByPPU(
-    const std::uint16_t address
+    const std::uint16_t address, const bool write
 ) const noexcept -> bool {
     if (ppu_ == nullptr) {
         return false;
     }
 
     if (0x8000 <= address && address <= 0x9FFF) {
-        return !ppu_->CanCPUAccessVRAM();
+        return !ppu_->CanCPUAccessVRAM(write);
     }
 
     if (0xFE00 <= address && address <= 0xFE9F) {
-        return !ppu_->CanCPUAccessOAM();
+        return !ppu_->CanCPUAccessOAM(write);
     }
 
     return false;
@@ -374,89 +411,36 @@ auto Bus::InitializePostBootState() noexcept -> void {
     ie_ = 0x00;
 }
 
-auto Bus::StartOAMDMA(
-    const std::uint8_t sourceHigh
-) -> void {
+auto Bus::StartOAMDMA(const std::uint8_t sourceHigh) -> void {
+    // The write M-cycle and the following M-cycle precede the new transfer.
+    // A restart keeps the old source and CPU restrictions until that edge.
     oamDMAActive_ = true;
-    oamDMASourceBase_ =
-        static_cast<std::uint16_t>(sourceHigh) << 8u;
-    oamDMAByteIndex_ = 0;
-    oamDMATCycleAccumulator_ = 0;
-    oamDMAStartupCyclesRemaining_ = 4;
-    oamDMAReleaseCyclesRemaining_ = 0;
+    const auto mappedHigh = sourceHigh >= 0xE0 ? sourceHigh - 0x20 : sourceHigh;
+    oamDMAPendingSourceBase_ = static_cast<std::uint16_t>(mappedHigh << 8u);
+    oamDMAStartupCyclesRemaining_ = 8;
 }
 
-auto Bus::TickOAMDMA(
-    const std::uint32_t tCycles
-) -> void {
-    if (!oamDMAActive_) {
-        return;
-    }
-
-    if (oamDMAReleaseCyclesRemaining_ != 0) {
-        if (tCycles >= oamDMAReleaseCyclesRemaining_) {
-            oamDMAReleaseCyclesRemaining_ = 0;
-            oamDMAActive_ = false;
-        } else {
-            oamDMAReleaseCyclesRemaining_ -= tCycles;
-        }
-        return;
-    }
-
-    auto transferCycles = tCycles;
-    if (oamDMAStartupCyclesRemaining_ != 0) {
-        const auto startupCycles = std::min(
-            transferCycles, oamDMAStartupCyclesRemaining_);
-        oamDMAStartupCyclesRemaining_ -= startupCycles;
-        transferCycles -= startupCycles;
-    }
-    oamDMATCycleAccumulator_ += transferCycles;
-
-    while (
-        oamDMAActive_ &&
-        oamDMATCycleAccumulator_ >=
-            OAM_DMA_T_CYCLES_PER_BYTE
-    ) {
-        oamDMATCycleAccumulator_ -=
-            OAM_DMA_T_CYCLES_PER_BYTE;
-
-        const std::uint16_t sourceAddress =
-            static_cast<std::uint16_t>(
-                oamDMASourceBase_ +
-                static_cast<std::uint16_t>(
-                    oamDMAByteIndex_
-                )
-            );
-
-        const std::uint16_t destinationAddress =
-            static_cast<std::uint16_t>(
-                OAM_BASE +
-                static_cast<std::uint16_t>(
-                    oamDMAByteIndex_
-                )
-            );
-
-        const std::uint8_t value =
-            Read(sourceAddress, BusAccess::DMA);
-
-        Write(
-            destinationAddress,
-            value,
-            BusAccess::DMA
-        );
-
-        ++oamDMAByteIndex_;
-
-        if (oamDMAByteIndex_ >= OAM_DMA_BYTES) {
-            // The bus remains claimed through the last transfer edge.
-            oamDMAReleaseCyclesRemaining_ = 1;
-            if (oamDMATCycleAccumulator_ >= oamDMAReleaseCyclesRemaining_) {
-                oamDMATCycleAccumulator_ -= oamDMAReleaseCyclesRemaining_;
-                oamDMAReleaseCyclesRemaining_ = 0;
-                oamDMAActive_ = false;
-            }
+auto Bus::TickOAMDMA(const std::uint32_t tCycles) -> void {
+    for (std::uint32_t cycle = 0; cycle < tCycles && oamDMAActive_; ++cycle) {
+        if (oamDMATransferRunning_ && ++oamDMATCycleAccumulator_ == 4) {
             oamDMATCycleAccumulator_ = 0;
-            break;
+            const auto source = static_cast<std::uint16_t>(
+                oamDMASourceBase_ + oamDMAByteIndex_);
+            const auto destination = static_cast<std::uint16_t>(
+                OAM_BASE + oamDMAByteIndex_);
+            Write(destination, Read(source, BusAccess::DMA), BusAccess::DMA);
+            if (++oamDMAByteIndex_ == OAM_DMA_BYTES) {
+                oamDMATransferRunning_ = false;
+                oamDMAActive_ = oamDMAStartupCyclesRemaining_ != 0;
+            }
+        }
+        if (oamDMAStartupCyclesRemaining_ != 0 &&
+            --oamDMAStartupCyclesRemaining_ == 0) {
+            oamDMASourceBase_ = oamDMAPendingSourceBase_;
+            oamDMAByteIndex_ = 0;
+            oamDMATCycleAccumulator_ = 0;
+            oamDMATransferRunning_ = true;
+            oamDMAActive_ = true;
         }
     }
 }

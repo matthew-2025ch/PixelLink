@@ -20,6 +20,9 @@ void Timer::Tick(uint32_t tCycles) {
 }
 
 void Timer::TickOneCycle() {
+    if (reloadCyclesRemaining_ > 0) {
+        --reloadCyclesRemaining_;
+    }
     // Handle delayed TIMA reload after overflow.
     if (overflowDelay_ > 0) {
         --overflowDelay_;
@@ -27,6 +30,7 @@ void Timer::TickOneCycle() {
         if (overflowDelay_ == 0) {
             tima_ = tma_;
             interruptRequested_ = true;
+            reloadCyclesRemaining_ = 4;
         }
     }
 
@@ -114,6 +118,9 @@ void Timer::Write(uint16_t address, uint8_t value) {
     }
 
     case TIMA:
+        if (reloadCyclesRemaining_ > 0) {
+            break;
+        }
         tima_ = value;
 
         // Writing TIMA during the overflow delay cancels the reload.
@@ -125,6 +132,9 @@ void Timer::Write(uint16_t address, uint8_t value) {
 
     case TMA:
         tma_ = value;
+        if (reloadCyclesRemaining_ > 0) {
+            tima_ = value;
+        }
         break;
 
     case TAC: {

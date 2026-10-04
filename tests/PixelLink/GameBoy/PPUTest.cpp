@@ -160,27 +160,27 @@ void testVisibleScanlineTiming() {
     CHECK(ppu.GetMode() == PPU::Mode::OAMScan);
     CHECK(ppu.GetLineDot() == 0);
 
-    ppu.Step(79);
+    ppu.Step(83);
 
     CHECK(ppu.GetMode() == PPU::Mode::OAMScan);
-    CHECK(ppu.GetLineDot() == 79);
+    CHECK(ppu.GetLineDot() == 83);
 
     ppu.Step(1);
 
     CHECK(ppu.GetMode() == PPU::Mode::Drawing);
-    CHECK(ppu.GetLineDot() == 80);
+    CHECK(ppu.GetLineDot() == 84);
 
     ppu.Step(171);
 
     CHECK(ppu.GetMode() == PPU::Mode::Drawing);
-    CHECK(ppu.GetLineDot() == 251);
+    CHECK(ppu.GetLineDot() == 255);
 
     ppu.Step(1);
 
     CHECK(ppu.GetMode() == PPU::Mode::HBlank);
-    CHECK(ppu.GetLineDot() == 252);
+    CHECK(ppu.GetLineDot() == 256);
 
-    ppu.Step(203);
+    ppu.Step(199);
 
     CHECK(ppu.GetLY() == 0);
     CHECK(ppu.GetMode() == PPU::Mode::HBlank);
@@ -189,8 +189,10 @@ void testVisibleScanlineTiming() {
     ppu.Step(1);
 
     CHECK(ppu.GetLY() == 1);
-    CHECK(ppu.GetMode() == PPU::Mode::OAMScan);
+    CHECK(ppu.GetMode() == PPU::Mode::HBlank);
     CHECK(ppu.GetLineDot() == 0);
+    ppu.Step(4);
+    CHECK(ppu.GetMode() == PPU::Mode::OAMScan);
 }
 
 void testVBlankEntry() {
@@ -200,11 +202,11 @@ void testVBlankEntry() {
 
     PPU ppu(bus);
 
-    ppu.Step(456u * 144u);
+    ppu.Step(456u * 144u + 4);
 
     CHECK(ppu.GetLY() == 144);
     CHECK(ppu.GetMode() == PPU::Mode::VBlank);
-    CHECK(ppu.GetLineDot() == 0);
+    CHECK(ppu.GetLineDot() == 4);
     CHECK((bus.Read(IF) & 0x01u) != 0);
 }
 
@@ -215,10 +217,13 @@ void testFrameLength() {
     PPU ppu(bus);
 
     ppu.Step(456u * 154u);
+    CHECK(ppu.GetLY() == 0);
+    CHECK(ppu.GetMode() == PPU::Mode::HBlank);
+    ppu.Step(4);
 
     CHECK(ppu.GetLY() == 0);
     CHECK(ppu.GetMode() == PPU::Mode::OAMScan);
-    CHECK(ppu.GetLineDot() == 0);
+    CHECK(ppu.GetLineDot() == 4);
 }
 
 void testCoincidenceFlag() {
@@ -232,6 +237,9 @@ void testCoincidenceFlag() {
     CHECK((bus.Read(STAT) & 0x04u) == 0);
 
     ppu.Step(456);
+    CHECK(ppu.GetLY() == 1);
+    CHECK((bus.Read(STAT) & 0x04u) == 0);
+    ppu.Step(4);
 
     CHECK(ppu.GetLY() == 1);
     CHECK(bus.Read(LY) == 1);
@@ -268,9 +276,13 @@ void testLCDEnableAfterDisabled() {
 
     ppu.Step(1);
 
-    CHECK(ppu.GetMode() == PPU::Mode::OAMScan);
+    CHECK(ppu.GetMode() == PPU::Mode::HBlank);
     CHECK(ppu.GetLineDot() == 1);
     CHECK(ppu.GetLY() == 0);
+    ppu.Step(76);
+    CHECK(ppu.GetMode() == PPU::Mode::HBlank);
+    ppu.Step(1);
+    CHECK(ppu.GetMode() == PPU::Mode::Drawing);
 }
 
 void testSTATMode0Interrupt() {
@@ -283,7 +295,7 @@ void testSTATMode0Interrupt() {
 
     PPU ppu(bus);
 
-    ppu.Step(252);
+    ppu.Step(256);
 
     CHECK(ppu.GetMode() == PPU::Mode::HBlank);
     CHECK((bus.Read(IF) & 0x02u) != 0);
@@ -299,7 +311,7 @@ void testSTATMode1Interrupt() {
 
     PPU ppu(bus);
 
-    ppu.Step(456u * 144u);
+    ppu.Step(456u * 144u + 4);
 
     CHECK(ppu.GetMode() == PPU::Mode::VBlank);
     CHECK((bus.Read(IF) & 0x02u) != 0);
@@ -333,6 +345,9 @@ void testSTATLYCInterrupt() {
     CHECK((bus.Read(IF) & 0x02u) == 0);
 
     ppu.Step(456);
+    CHECK(ppu.GetLY() == 1);
+    CHECK((bus.Read(STAT) & 0x04u) == 0);
+    ppu.Step(4);
 
     CHECK(ppu.GetLY() == 1);
     CHECK((bus.Read(STAT) & 0x04u) != 0);
@@ -353,7 +368,7 @@ void testSTATSharedLineRisingEdge() {
     CHECK((bus.Read(IF) & 0x02u) != 0);
 
     // Mode 2 -> Mode 3 makes the line low.
-    ppu.Step(80);
+    ppu.Step(84);
     CHECK(ppu.GetMode() == PPU::Mode::Drawing);
 
     bus.Write(IF, 0x00);
@@ -402,7 +417,7 @@ void testCPUAccessRules() {
     CHECK(!ppu.CanCPUAccessOAM());
 
     // Mode 3: both VRAM and OAM are blocked.
-    ppu.Step(80);
+    ppu.Step(84);
 
     CHECK(ppu.GetMode() == PPU::Mode::Drawing);
     CHECK(!ppu.CanCPUAccessVRAM());
@@ -450,7 +465,7 @@ void testBackgroundTileDecoding() {
     );
 
     PPU ppu(bus);
-    ppu.Step(252);
+    ppu.Step(376);
 
     CHECK(pixel(ppu, 0, 0) == 0);
     CHECK(pixel(ppu, 1, 0) == 1);
@@ -478,7 +493,7 @@ void testBackgroundPalette() {
     );
 
     PPU ppu(bus);
-    ppu.Step(252);
+    ppu.Step(376);
 
     CHECK(pixel(ppu, 0, 0) == 3);
     CHECK(pixel(ppu, 1, 0) == 2);
@@ -509,7 +524,7 @@ void testBackgroundHorizontalScroll() {
     bus.Write(SCX, 8);
 
     PPU ppu(bus);
-    ppu.Step(252);
+    ppu.Step(376);
 
     CHECK(pixel(ppu, 0, 0) == 2);
     CHECK(pixel(ppu, 7, 0) == 2);
@@ -529,7 +544,7 @@ void testBackgroundVerticalScroll() {
     bus.Write(SCY, 8);
 
     PPU ppu(bus);
-    ppu.Step(252);
+    ppu.Step(376);
 
     CHECK(pixel(ppu, 0, 0) == 3);
 }
@@ -546,7 +561,7 @@ void testBackgroundTileMapSelection() {
     writeSolidTileRow(bus, 1, 0, 2);
 
     PPU ppu(bus);
-    ppu.Step(252);
+    ppu.Step(376);
 
     CHECK(pixel(ppu, 0, 0) == 2);
 }
@@ -567,7 +582,7 @@ void testSignedTileDataAddressing() {
     );
 
     PPU ppu(bus);
-    ppu.Step(252);
+    ppu.Step(376);
 
     CHECK(pixel(ppu, 0, 0) == 2);
 }
@@ -580,7 +595,7 @@ void testBackgroundDisabled() {
     bus.Write(BGP, 0x03);
 
     PPU ppu(bus);
-    ppu.Step(252);
+    ppu.Step(376);
 
     CHECK(pixel(ppu, 0, 0) == 3);
     CHECK(pixel(ppu, 80, 0) == 3);
@@ -603,7 +618,7 @@ void testWindowOverlay() {
     bus.Write(WX, 7);
 
     PPU ppu(bus);
-    ppu.Step(252);
+    ppu.Step(376);
 
     CHECK(pixel(ppu, 0, 0) == 2);
     CHECK(pixel(ppu, 7, 0) == 2);
@@ -626,7 +641,7 @@ void testWindowWXOffset() {
     bus.Write(WX, 15);
 
     PPU ppu(bus);
-    ppu.Step(252);
+    ppu.Step(376);
 
     CHECK(pixel(ppu, 7, 0) == 1);
     CHECK(pixel(ppu, 8, 0) == 2);
@@ -648,7 +663,7 @@ void testWindowWYPosition() {
 
     PPU ppu(bus);
 
-    ppu.Step(252);
+    ppu.Step(376);
 
     CHECK(pixel(ppu, 0, 0) == 1);
     CHECK(ppu.GetWindowLine() == 0);
@@ -682,7 +697,7 @@ void testWindowInternalLineCounter() {
     PPU ppu(bus);
 
     // Line 0 renders Window line 0.
-    ppu.Step(252);
+    ppu.Step(376);
     CHECK(pixel(ppu, 0, 0) == 1);
     CHECK(ppu.GetWindowLine() == 1);
 
@@ -723,7 +738,7 @@ void testWindowInvisibleWXDoesNotAdvanceCounter() {
     bus.Write(WX, 167);
 
     PPU ppu(bus);
-    ppu.Step(252);
+    ppu.Step(376);
 
     CHECK(ppu.GetWindowLine() == 0);
 }
@@ -748,7 +763,7 @@ void testSpriteBasicRendering() {
     );
 
     PPU ppu(bus);
-    ppu.Step(252);
+    ppu.Step(376);
 
     CHECK(pixel(ppu, 0, 0) == 2);
     CHECK(pixel(ppu, 7, 0) == 2);
@@ -780,7 +795,7 @@ void testSpriteColorZeroTransparent() {
     );
 
     PPU ppu(bus);
-    ppu.Step(252);
+    ppu.Step(376);
 
     CHECK(pixel(ppu, 0, 0) == 1);
     CHECK(pixel(ppu, 1, 0) == 3);
@@ -810,7 +825,7 @@ void testSpritePaletteSelection() {
     );
 
     PPU ppu(bus);
-    ppu.Step(252);
+    ppu.Step(376);
 
     CHECK(pixel(ppu, 0, 0) == 3);
 }
@@ -844,7 +859,7 @@ void testSpriteXFlip() {
     );
 
     PPU ppu(bus);
-    ppu.Step(252);
+    ppu.Step(376);
 
     CHECK(pixel(ppu, 0, 0) == 2);
     CHECK(pixel(ppu, 7, 0) == 1);
@@ -871,7 +886,7 @@ void testSpriteYFlip() {
     );
 
     PPU ppu(bus);
-    ppu.Step(252);
+    ppu.Step(376);
 
     CHECK(pixel(ppu, 0, 0) == 3);
 }
@@ -904,7 +919,7 @@ void testSpriteBehindBackgroundPriority() {
     );
 
     PPU ppu(bus);
-    ppu.Step(252);
+    ppu.Step(376);
 
     CHECK(pixel(ppu, 0, 0) == 1);
     CHECK(pixel(ppu, 1, 0) == 2);
@@ -940,7 +955,7 @@ void testSpritePriorityLowerXWins() {
     );
 
     PPU ppu(bus);
-    ppu.Step(252);
+    ppu.Step(376);
 
     CHECK(pixel(ppu, 2, 0) == 2);
 }
@@ -972,7 +987,7 @@ void testSpritePrioritySameXLowerOAMWins() {
     );
 
     PPU ppu(bus);
-    ppu.Step(252);
+    ppu.Step(376);
 
     CHECK(pixel(ppu, 0, 0) == 1);
 }
@@ -1008,7 +1023,7 @@ void testSpriteTenPerLineLimit() {
     );
 
     PPU ppu(bus);
-    ppu.Step(252);
+    ppu.Step(376);
 
     CHECK(pixel(ppu, 0, 0) == 0);
 }
@@ -1038,7 +1053,7 @@ void testSprite8x16Mode() {
 
     PPU ppu(bus);
 
-    ppu.Step(252);
+    ppu.Step(376);
     CHECK(pixel(ppu, 0, 0) == 1);
 
     ppu.Step(456u * 8u);
@@ -1066,16 +1081,76 @@ void testSprite8x16YFlip() {
     );
 
     PPU ppu(bus);
-    ppu.Step(252);
+    ppu.Step(376);
 
     // Y-flipping the whole 8x16 object makes screen line 0
     // read from the bottom tile.
     CHECK(pixel(ppu, 0, 0) == 2);
 }
 
+void testSeparateReadWriteBoundaries() {
+    Bus bus;
+    bus.Write(LCDC, 0);
+    bus.Write(OAM, 0x12);
+    bus.Write(TILE_DATA_0, 0x34);
+    PPU ppu(bus);
+    enableLCD(bus);
+    ppu.Step(77);
+    CHECK(bus.Read(TILE_DATA_0) == 0x34);
+    ppu.Step(1);
+    CHECK(bus.Read(TILE_DATA_0) == 0xFF);
+
+    // The shortened first line ends at 450 dots. On the next line
+    // OAM reads close before Mode 2, but writes remain open until dot 4.
+    ppu.Step(374);
+    CHECK(ppu.GetLY() == 1);
+    CHECK(ppu.GetLineDot() == 2);
+    CHECK(bus.Read(OAM) == 0xFF);
+    bus.Write(OAM, 0x56);
+    CHECK(bus.Read(OAM, BusAccess::Internal) == 0x56);
+    ppu.Step(2);
+    bus.Write(OAM, 0x78);
+    CHECK(bus.Read(OAM, BusAccess::Internal) == 0x56);
+
+    ppu.Step(78);
+    CHECK(ppu.GetLineDot() == 82);
+    CHECK(ppu.GetMode() == PPU::Mode::OAMScan);
+    CHECK(bus.Read(TILE_DATA_0) == 0xFF);
+    CHECK(bus.Read(OAM) == 0xFF);
+    bus.Write(OAM, 0x78); // OAM write gate briefly reopens at search end
+    CHECK(bus.Read(OAM, BusAccess::Internal) == 0x78);
+    bus.Write(TILE_DATA_0, 0x9A);
+    CHECK(bus.Read(TILE_DATA_0, BusAccess::Internal) == 0x9A);
+    ppu.Step(2);
+    bus.Write(OAM, 0xBC);
+    CHECK(bus.Read(OAM, BusAccess::Internal) == 0x78);
+    bus.Write(TILE_DATA_0, 0xBC);
+    CHECK(bus.Read(TILE_DATA_0, BusAccess::Internal) == 0x9A);
+}
+
+void testFinalVBlankLineLY() {
+    Bus bus;
+    PPU ppu(bus);
+    ppu.Step(153u * 456u + 3u);
+    CHECK(ppu.GetLY() == 153);
+    CHECK(ppu.GetMode() == PPU::Mode::VBlank);
+    ppu.Step(1);
+    CHECK(ppu.GetLY() == 0);
+    CHECK(ppu.GetMode() == PPU::Mode::VBlank);
+    bus.Write(LY, 99);
+    CHECK(bus.Read(LY) == 0);
+    ppu.Step(452);
+    CHECK(ppu.GetLineDot() == 0);
+    CHECK(ppu.GetMode() == PPU::Mode::HBlank);
+    ppu.Step(4);
+    CHECK(ppu.GetMode() == PPU::Mode::OAMScan);
+}
+
 } // namespace
 
 void run() {
+    Test::run("PPU / separate read and write port boundaries", testSeparateReadWriteBoundaries);
+    Test::run("PPU / final VBlank line LY and read-only register", testFinalVBlankLineLY);
     Test::run("PPU / visible scanline timing", testVisibleScanlineTiming);
     Test::run("PPU / VBlank entry", testVBlankEntry);
     Test::run("PPU / frame length", testFrameLength);

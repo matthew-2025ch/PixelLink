@@ -189,7 +189,7 @@ void testPPUAccessRestrictions() {
     );
 
     // Mode 3: CPU cannot access VRAM or OAM.
-    ppu.Step(80);
+    ppu.Step(84);
 
     CHECK(ppu.GetMode() == PPU::Mode::Drawing);
     CHECK(bus.Read(0x8000) == 0xFF);
@@ -231,7 +231,8 @@ void testOAMDMATransfer() {
     CHECK(bus.GetOAMDMABytesTransferred() == 0);
 
     bus.Tick(4);
-
+    CHECK(bus.GetOAMDMABytesTransferred() == 0);
+    bus.Tick(4);
     CHECK(bus.IsOAMDMAActive());
     CHECK(bus.GetOAMDMABytesTransferred() == 1);
 
@@ -240,10 +241,10 @@ void testOAMDMATransfer() {
         static_cast<std::uint8_t>(0x00 ^ 0x5A)
     );
 
-    bus.Tick(636);
+    bus.Tick(635);
 
     CHECK(bus.IsOAMDMAActive());
-    CHECK(bus.GetOAMDMABytesTransferred() == 0x00A0);
+    CHECK(bus.GetOAMDMABytesTransferred() == 0x009F);
     bus.Tick(1);
 
     CHECK(!bus.IsOAMDMAActive());
@@ -270,6 +271,8 @@ void testOAMDMACPUTimingRestriction() {
     CHECK(bus.IsOAMDMAActive());
     CHECK(bus.Read(0xC000) == 0x12);
     bus.Tick(4);
+    CHECK(bus.Read(0xC000) == 0x12);
+    bus.Tick(4);
 
     // During an external-bus DMA transfer, the CPU can access HRAM only.
     CHECK(bus.Read(0xC000) == 0xFF);
@@ -280,7 +283,7 @@ void testOAMDMACPUTimingRestriction() {
 
     CHECK(bus.Read(0xFF80) == 0x56);
 
-    bus.Tick(641);
+    bus.Tick(640);
 
     CHECK(!bus.IsOAMDMAActive());
 
@@ -296,7 +299,7 @@ void testOAMDMAVideoBusRestriction() {
     bus.Write(0xFE00, 0x56);
     bus.Write(0xFF46, 0x80);
     CHECK(bus.Read(0x8000) == 0x12);
-    bus.Tick(4);
+    bus.Tick(8);
 
     CHECK(bus.Read(0x8000) == 0xFF);
     CHECK(bus.Read(0xC000) == 0x34);
@@ -322,7 +325,7 @@ void testOAMDMARestart() {
     }
 
     bus.Write(0xFF46, 0xC0);
-    bus.Tick(44);
+    bus.Tick(48);
 
     CHECK(bus.GetOAMDMABytesTransferred() == 10);
 
@@ -330,9 +333,13 @@ void testOAMDMARestart() {
     bus.Write(0xFF46, 0xD0);
 
     CHECK(bus.IsOAMDMAActive());
+    CHECK(bus.GetOAMDMABytesTransferred() == 10);
+    CHECK(bus.Read(0xC000) == 0xFF);
+    bus.Tick(7);
+    CHECK(bus.GetOAMDMABytesTransferred() == 11);
+    bus.Tick(1);
     CHECK(bus.GetOAMDMABytesTransferred() == 0);
-
-    bus.Tick(645);
+    bus.Tick(640);
 
     CHECK(!bus.IsOAMDMAActive());
 
@@ -343,6 +350,21 @@ void testOAMDMARestart() {
             ) == 0x22
         );
     }
+}
+
+void testOAMDMARegisterReadDuringTransfer() {
+    Bus bus;
+    for (const std::uint8_t source : {0xC0, 0xD0}) {
+        bus.Write(0xFF46, source);
+        CHECK(bus.Read(0xFF46) == source);
+        bus.Tick(44);
+        CHECK(bus.IsOAMDMAActive());
+        CHECK(bus.Read(0xFF46) == source);
+        CHECK(bus.Read(0xC000) == 0xFF);
+    }
+    bus.Tick(645);
+    CHECK(!bus.IsOAMDMAActive());
+    CHECK(bus.Read(0xFF46) == 0xD0);
 }
 
 } // namespace
@@ -370,6 +392,7 @@ void run() {
     );
     Test::run("DMA / video bus restriction", testOAMDMAVideoBusRestriction);
     Test::run("DMA / restart", testOAMDMARestart);
+    Test::run("DMA / FF46 read during transfer", testOAMDMARegisterReadDuringTransfer);
 }
 
 } // namespace PixelLink::Test::GameBoy::BusTest

@@ -29,6 +29,8 @@ public:
 
     void Reset();
     void Step(std::uint32_t tCycles);
+    // Called after the bus stores a CPU write to LCDC, STAT or LYC.
+    void OnRegisterWrite(std::uint16_t address, std::uint8_t oldValue);
 
     [[nodiscard]] Mode GetMode() const noexcept;
     [[nodiscard]] std::uint8_t GetLY() const noexcept;
@@ -37,8 +39,8 @@ public:
     [[nodiscard]] const Framebuffer& GetFramebuffer() const noexcept;
 
     // CPU-side PPU memory access rules.
-    [[nodiscard]] bool CanCPUAccessVRAM() const noexcept;
-    [[nodiscard]] bool CanCPUAccessOAM() const noexcept;
+    [[nodiscard]] bool CanCPUAccessVRAM(bool write = false) const noexcept;
+    [[nodiscard]] bool CanCPUAccessOAM(bool write = false) const noexcept;
 
 private:
     struct Sprite {
@@ -69,8 +71,8 @@ private:
     static constexpr std::uint16_t BG_TILE_MAP_1_BASE      = 0x9C00;
     static constexpr std::uint16_t OAM_BASE                = 0xFE00;
 
-    static constexpr std::uint16_t OAM_SCAN_END  = 80;
-    static constexpr std::uint16_t DRAWING_END   = 252;
+    static constexpr std::uint16_t OAM_SCAN_END  = 84;
+    static constexpr std::uint16_t DRAWING_END   = OAM_SCAN_END + 172;
     static constexpr std::uint16_t DOTS_PER_LINE = 456;
 
     static constexpr std::uint8_t VISIBLE_LINES = 144;
@@ -85,6 +87,9 @@ private:
     std::uint8_t ly_ = 0;
     std::uint16_t lineDot_ = 0;
     std::uint8_t windowLine_ = 0;
+    std::uint8_t physicalLine_ = 0;
+    bool firstLineAfterEnable_ = false;
+    std::uint16_t drawingEnd_ = DRAWING_END;
 
     // Previous state of the combined STAT interrupt line.
     // STAT requests an interrupt only on a low-to-high transition.
@@ -108,6 +113,7 @@ private:
     );
 
     void StepOneDot();
+    [[nodiscard]] std::uint16_t TransferPenalty() const;
     void SetMode(Mode mode);
     void SetLY(std::uint8_t value);
     void UpdateSTAT();

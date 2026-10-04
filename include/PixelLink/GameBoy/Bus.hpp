@@ -11,6 +11,7 @@ class APU;
 class Joypad;
 class PPU;
 class Timer;
+class Serial;
 
 enum class BusAccess : std::uint8_t {
     CPU,
@@ -33,6 +34,8 @@ public:
 
     auto AttachTimer(Timer& timer) noexcept -> void;
     auto DetachTimer(const Timer& timer) noexcept -> void;
+    auto AttachSerial(Serial& serial) noexcept -> void;
+    auto DetachSerial(const Serial& serial) noexcept -> void;
 
     auto AttachAPU(APU& apu) noexcept -> void;
     auto DetachAPU(const APU& apu) noexcept -> void;
@@ -75,6 +78,7 @@ private:
     Cartridge* cartridge_ = nullptr;
     PPU* ppu_ = nullptr;
     Timer* timer_ = nullptr;
+    Serial* serial_ = nullptr;
     APU* apu_ = nullptr;
     Joypad* joypad_ = nullptr;
 
@@ -89,11 +93,12 @@ private:
     std::uint8_t ie_ = 0;
 
     bool oamDMAActive_ = false;
+    bool oamDMATransferRunning_ = false;
     std::uint16_t oamDMASourceBase_ = 0;
+    std::uint16_t oamDMAPendingSourceBase_ = 0;
     std::size_t oamDMAByteIndex_ = 0;
     std::uint32_t oamDMATCycleAccumulator_ = 0;
     std::uint32_t oamDMAStartupCyclesRemaining_ = 0;
-    std::uint32_t oamDMAReleaseCyclesRemaining_ = 0;
 
     [[nodiscard]] static auto IsHRAMAddress(
         std::uint16_t address
@@ -104,7 +109,7 @@ private:
     ) const noexcept -> bool;
 
     [[nodiscard]] auto IsCPUAccessBlockedByPPU(
-        std::uint16_t address
+        std::uint16_t address, bool write = false
     ) const noexcept -> bool;
 
     auto InitializePostBootState() noexcept -> void;

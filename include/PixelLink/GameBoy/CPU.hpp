@@ -53,8 +53,11 @@ private:
 
     Bus& bus;
     std::function<void(std::uint32_t)> cycleCallback_;
+    std::uint32_t stepCycles_ = 0;
 
     auto AdvanceCycles(std::uint32_t cycles) -> void;
+    auto ReadCycle(uint16_t address) -> uint8_t;
+    auto WriteCycle(uint16_t address, uint8_t value) -> void;
 
     auto Fetch8() -> uint8_t;
     auto FetchOpcode() -> uint8_t;
@@ -76,7 +79,7 @@ private:
     auto ReadR8(uint8_t code) -> uint8_t;
     auto WriteR8(uint8_t code, uint8_t value) -> void;
 
-    auto Push16(uint16_t value) -> void;
+    auto Push16(uint16_t value, bool idleBefore = true) -> void;
     auto Pop16() -> uint16_t;
 
     auto Inc8(uint8_t value) -> uint8_t;

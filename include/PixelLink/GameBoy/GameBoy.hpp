@@ -9,6 +9,7 @@
 #include <PixelLink/GameBoy/Joypad.hpp>
 #include <PixelLink/GameBoy/PPU.hpp>
 #include <PixelLink/GameBoy/Timer.hpp>
+#include <PixelLink/GameBoy/Serial.hpp>
 
 namespace PixelLink::GameBoy {
 
@@ -39,6 +40,7 @@ public:
 
     [[nodiscard]] auto GetTimer() noexcept -> Timer&;
     [[nodiscard]] auto GetTimer() const noexcept -> const Timer&;
+    [[nodiscard]] auto GetSerial() noexcept -> Serial&;
 
     [[nodiscard]] auto GetJoypad() noexcept -> Joypad&;
     [[nodiscard]] auto GetJoypad() const noexcept -> const Joypad&;
@@ -58,12 +60,14 @@ private:
 
     Cartridge cartridge_;
     Timer timer_;
+    // Clock phase at PC=0100 after the DMG ABC boot sequence. DIV writes
+    // subsequently reset the timer counter, but do not reset this link clock.
+    Serial serial_{0xABCC};
     Joypad joypad_;
     APU apu_;
     Bus bus_;
     PPU ppu_;
     CPU cpu_;
-    std::uint32_t advancedCycles_ = 0;
 
     auto TickDevices(std::uint32_t cycles) -> void;
 };

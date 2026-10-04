@@ -36,6 +36,7 @@ add_library(PixelLinkGameBoy STATIC
     src/PixelLink/GameBoy/Joypad.cpp
     src/PixelLink/GameBoy/PPU.cpp
     src/PixelLink/GameBoy/Timer.cpp
+    src/PixelLink/GameBoy/Serial.cpp
 )
 
 add_library(PixelLink::GameBoy ALIAS PixelLinkGameBoy)
@@ -92,6 +93,7 @@ add_executable(GameBoyTests
     tests/PixelLink/GameBoy/CartridgeTest.cpp
     tests/PixelLink/GameBoy/CPUTest.cpp
     tests/PixelLink/GameBoy/CoreTimingTest.cpp
+    tests/PixelLink/GameBoy/HardwareAccuracy.cpp
     tests/PixelLink/GameBoy/InterruptTest.cpp
     tests/PixelLink/GameBoy/JoypadTest.cpp
     tests/PixelLink/GameBoy/MapperFactoryTest.cpp
@@ -99,9 +101,9 @@ add_executable(GameBoyTests
     tests/PixelLink/GameBoy/MBC3Test.cpp
     tests/PixelLink/GameBoy/MBC5Test.cpp
     tests/PixelLink/GameBoy/PPUTest.cpp
-    tests/PixelLink/GameBoy/ROMTest.cpp
     tests/PixelLink/GameBoy/RTCTest.cpp
     tests/PixelLink/GameBoy/SaveTest.cpp
+    tests/PixelLink/GameBoy/SerialTest.cpp
     tests/PixelLink/GameBoy/TimerIntegrationTest.cpp
     tests/PixelLink/GameBoy/TimerTest.cpp
 )
@@ -120,6 +122,10 @@ add_test(
     NAME GameBoyTests
     COMMAND GameBoyTests
 )
+
+# The hardware suite runs all 40 ROMs inside GameBoyTests and reports every
+# failure before returning. Preserve the previous host budget across the set.
+set_tests_properties(GameBoyTests PROPERTIES LABELS accuracy TIMEOUT 4800)
 
 # ------------------------------------------------------------
 # Emulator integration tests
@@ -152,6 +158,26 @@ add_executable(AudioFrontendTests
 target_link_libraries(AudioFrontendTests
     PRIVATE PixelLink::Emulator
 )
+
+# Windows searches beside the executable for SDL's runtime DLL. Resolve the
+# selected SDL target so this also works with multi-config generators and
+# requires no copy when SDL is built as a static library.
+function(pixellink_deploy_sdl_runtime target)
+    if(WIN32)
+        get_target_property(sdl_type SDL3::SDL3 TYPE)
+        if(sdl_type STREQUAL "SHARED_LIBRARY")
+            add_custom_command(TARGET ${target} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "$<TARGET_FILE:SDL3::SDL3>"
+                    "$<TARGET_FILE_DIR:${target}>"
+                VERBATIM
+            )
+        endif()
+    endif()
+endfunction()
+
+pixellink_deploy_sdl_runtime(FrontendTests)
+pixellink_deploy_sdl_runtime(AudioFrontendTests)
 
 add_test(
     NAME AudioFrontendTests

@@ -23,11 +23,12 @@ int main() {
         MBC3Test::run();
         MBC5Test::run();
         PPUTest::run();
-        ROMTest::run();
         RTCTest::run();
         SaveTest::run();
+        SerialTest::run();
         TimerIntegrationTest::run();
         TimerTest::run();
+        PixelLink::Tests::Gameboy::HardwareAccuracy::run();
     }
     catch (...) {
         std::cerr

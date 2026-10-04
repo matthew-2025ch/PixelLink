@@ -49,12 +49,9 @@ ipch/
 *.VC.VC.opendb
 *.opendb
 
-# Game Boy ROM / save files
-*.gb
-*.gbc
+# Game Boy save files
 *.sav
 *.rtc
-!assests/roms/mooneye/acceptance/*.gb
 
 # Temporary files
 *.tmp

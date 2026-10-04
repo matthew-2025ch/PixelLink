@@ -52,15 +52,15 @@ namespace GameBoy{
         void run();
     }
 
-    namespace ROMTest {
-        void run();
-    }
-
     namespace RTCTest {
         void run();
     }
 
     namespace SaveTest {
+        void run();
+    }
+
+    namespace SerialTest {
         void run();
     }
 
@@ -80,3 +80,7 @@ namespace Frontend {
 } // namespace Frontend
 
 } // namespace PixelLink::Test
+
+namespace PixelLink::Tests::Gameboy::HardwareAccuracy {
+    void run();
+}

@@ -25,6 +25,10 @@ private:
     // TIMA stays 0 for one M-cycle after overflowing.
     uint8_t overflowDelay_ = 0;
 
+    // During the reload M-cycle, TIMA writes are ignored and TMA writes
+    // also update TIMA. This is distinct from the cancellable overflow delay.
+    uint8_t reloadCyclesRemaining_ = 0;
+
     bool TimerSignal() const;
     void IncrementTima();
     void TickOneCycle();

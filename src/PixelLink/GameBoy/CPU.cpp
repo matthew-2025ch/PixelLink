@@ -16,7 +16,8 @@ auto CPU::SetCycleCallback(
 }
 
 auto CPU::AdvanceCycles(const std::uint32_t cycles) -> void {
-    if (cycleCallback_) {
+    stepCycles_ += cycles;
+    if (cycles != 0 && cycleCallback_) {
         cycleCallback_(cycles);
     }
 }
@@ -42,37 +43,52 @@ auto CPU::Reset() -> void {
     haltBugPending = false;
 }
 
-auto CPU::Step() -> int {
-    const uint8_t pending =
-        PendingInterrupts();
+auto CPU::ReadCycle(uint16_t address) -> uint8_t {
+    const auto value = bus.Read(address);
+    AdvanceCycles(4);
+    return value;
+}
 
+auto CPU::WriteCycle(uint16_t address, uint8_t value) -> void {
+    bus.Write(address, value);
+    AdvanceCycles(4);
+}
+
+auto CPU::Step() -> int {
+    stepCycles_ = 0;
+    const uint8_t pending = PendingInterrupts();
     if (pending != 0) {
         halted = false;
-
         if (ime) {
-            return ServiceInterrupt(pending);
+            const int cycles = ServiceInterrupt(pending);
+            AdvanceCycles(static_cast<std::uint32_t>(cycles) - stepCycles_);
+            return cycles;
         }
     }
-
     if (halted) {
+        AdvanceCycles(4);
         return 4;
     }
-
-    const int cycles = Execute(FetchOpcode());
-
+    const auto opcode = FetchOpcode();
+    const int cycles = Execute(opcode);
+    if (stepCycles_ > static_cast<std::uint32_t>(cycles)) {
+        throw std::logic_error(std::format(
+            "Opcode {:02X} advanced {} instead of {} cycles at PC {:04X}",
+            opcode, stepCycles_, cycles, PC));
+    }
+    AdvanceCycles(static_cast<std::uint32_t>(cycles) - stepCycles_);
     UpdateIME();
-
     return cycles;
 }
 
 auto CPU::Fetch8() -> uint8_t {
-    return bus.Read(PC++);
+    return ReadCycle(PC++);
 }
 
 auto CPU::FetchOpcode() -> uint8_t {
     if (haltBugPending) {
         haltBugPending = false;
-        return bus.Read(PC);
+        return ReadCycle(PC);
     }
     return Fetch8();
 }
@@ -139,7 +155,7 @@ auto CPU::ReadR8(uint8_t code) -> uint8_t {
     case 3: return E;
     case 4: return H;
     case 5: return L;
-    case 6: return bus.Read(GetHL());
+    case 6: return ReadCycle(GetHL());
     default: return A;
     }
 }
@@ -152,21 +168,24 @@ auto CPU::WriteR8(uint8_t code, uint8_t value) -> void {
     case 3: E = value; break;
     case 4: H = value; break;
     case 5: L = value; break;
-    case 6: bus.Write(GetHL(), value); break;
+    case 6: WriteCycle(GetHL(), value); break;
     default: A = value; break;
     }
 }
 
-auto CPU::Push16(uint16_t value) -> void {
+auto CPU::Push16(uint16_t value, const bool idleBefore) -> void {
+    if (idleBefore) {
+        AdvanceCycles(4); // CALL/PUSH/RST have an idle cycle before the writes.
+    }
     --SP;
-    bus.Write(SP, static_cast<uint8_t>(value >> 8));
+    WriteCycle(SP, static_cast<uint8_t>(value >> 8));
     --SP;
-    bus.Write(SP, static_cast<uint8_t>(value & 0x00FFu));
+    WriteCycle(SP, static_cast<uint8_t>(value & 0x00FFu));
 }
 
 auto CPU::Pop16() -> uint16_t {
-    const uint8_t low = bus.Read(SP++);
-    const uint8_t high = bus.Read(SP++);
+    const uint8_t low = ReadCycle(SP++);
+    const uint8_t high = ReadCycle(SP++);
     return static_cast<uint16_t>(low | (static_cast<uint16_t>(high) << 8));
 }
 
@@ -277,6 +296,7 @@ auto CPU::ConditionalCall(bool condition) -> int {
 }
 
 auto CPU::ConditionalRet(bool condition) -> int {
+    AdvanceCycles(4); // condition check precedes the stack reads
     if (condition) {
         PC = Pop16();
         return 20;
@@ -407,7 +427,7 @@ auto CPU::Execute(uint8_t opcode) -> int {
         return 4;
 
     case 0x01: SetBC(Fetch16()); return 12;
-    case 0x02: bus.Write(GetBC(), A); return 8;
+    case 0x02: WriteCycle(GetBC(), A); return 8;
     case 0x03: SetBC(static_cast<uint16_t>(GetBC() + 1)); return 8;
     case 0x04: B = Inc8(B); return 4;
     case 0x05: B = Dec8(B); return 4;
@@ -420,12 +440,12 @@ auto CPU::Execute(uint8_t opcode) -> int {
     }
     case 0x08: { // LD (a16),SP
         const uint16_t address = Fetch16();
-        bus.Write(address, static_cast<uint8_t>(SP));
-        bus.Write(static_cast<uint16_t>(address + 1), static_cast<uint8_t>(SP >> 8));
+        WriteCycle(address, static_cast<uint8_t>(SP));
+        WriteCycle(static_cast<uint16_t>(address + 1), static_cast<uint8_t>(SP >> 8));
         return 20;
     }
     case 0x09: AddHL(GetBC()); return 8;
-    case 0x0A: A = bus.Read(GetBC()); return 8;
+    case 0x0A: A = ReadCycle(GetBC()); return 8;
     case 0x0B: SetBC(static_cast<uint16_t>(GetBC() - 1)); return 8;
     case 0x0C: C = Inc8(C); return 4;
     case 0x0D: C = Dec8(C); return 4;
@@ -438,11 +458,11 @@ auto CPU::Execute(uint8_t opcode) -> int {
     }
 
     case 0x10: // STOP 0
-        (void)Fetch8(); // The second byte is normally 0x00.
+        ++PC; // STOP padding byte does not consume a second M-cycle.
         halted = true;  // Simplified until joypad/speed-switch handling exists.
         return 4;
     case 0x11: SetDE(Fetch16()); return 12;
-    case 0x12: bus.Write(GetDE(), A); return 8;
+    case 0x12: WriteCycle(GetDE(), A); return 8;
     case 0x13: SetDE(static_cast<uint16_t>(GetDE() + 1)); return 8;
     case 0x14: D = Inc8(D); return 4;
     case 0x15: D = Dec8(D); return 4;
@@ -456,7 +476,7 @@ auto CPU::Execute(uint8_t opcode) -> int {
     }
     case 0x18: return RelativeJump(true);
     case 0x19: AddHL(GetDE()); return 8;
-    case 0x1A: A = bus.Read(GetDE()); return 8;
+    case 0x1A: A = ReadCycle(GetDE()); return 8;
     case 0x1B: SetDE(static_cast<uint16_t>(GetDE() - 1)); return 8;
     case 0x1C: E = Inc8(E); return 4;
     case 0x1D: E = Dec8(E); return 4;
@@ -471,7 +491,7 @@ auto CPU::Execute(uint8_t opcode) -> int {
 
     case 0x20: return RelativeJump(!GetFlag(Z));
     case 0x21: SetHL(Fetch16()); return 12;
-    case 0x22: { const uint16_t a = GetHL(); bus.Write(a, A); SetHL(static_cast<uint16_t>(a + 1)); return 8; }
+    case 0x22: { const uint16_t a = GetHL(); WriteCycle(a, A); SetHL(static_cast<uint16_t>(a + 1)); return 8; }
     case 0x23: SetHL(static_cast<uint16_t>(GetHL() + 1)); return 8;
     case 0x24: H = Inc8(H); return 4;
     case 0x25: H = Dec8(H); return 4;
@@ -501,7 +521,7 @@ auto CPU::Execute(uint8_t opcode) -> int {
     }
     case 0x28: return RelativeJump(GetFlag(Z));
     case 0x29: AddHL(GetHL()); return 8;
-    case 0x2A: { const uint16_t a = GetHL(); A = bus.Read(a); SetHL(static_cast<uint16_t>(a + 1)); return 8; }
+    case 0x2A: { const uint16_t a = GetHL(); A = ReadCycle(a); SetHL(static_cast<uint16_t>(a + 1)); return 8; }
     case 0x2B: SetHL(static_cast<uint16_t>(GetHL() - 1)); return 8;
     case 0x2C: L = Inc8(L); return 4;
     case 0x2D: L = Dec8(L); return 4;
@@ -514,11 +534,11 @@ auto CPU::Execute(uint8_t opcode) -> int {
 
     case 0x30: return RelativeJump(!GetFlag(CF));
     case 0x31: SP = Fetch16(); return 12;
-    case 0x32: { const uint16_t a = GetHL(); bus.Write(a, A); SetHL(static_cast<uint16_t>(a - 1)); return 8; }
+    case 0x32: { const uint16_t a = GetHL(); WriteCycle(a, A); SetHL(static_cast<uint16_t>(a - 1)); return 8; }
     case 0x33: ++SP; return 8;
-    case 0x34: { const uint16_t a = GetHL(); bus.Write(a, Inc8(bus.Read(a))); return 12; }
-    case 0x35: { const uint16_t a = GetHL(); bus.Write(a, Dec8(bus.Read(a))); return 12; }
-    case 0x36: bus.Write(GetHL(), Fetch8()); return 12;
+    case 0x34: { const uint16_t a = GetHL(); WriteCycle(a, Inc8(ReadCycle(a))); return 12; }
+    case 0x35: { const uint16_t a = GetHL(); WriteCycle(a, Dec8(ReadCycle(a))); return 12; }
+    case 0x36: WriteCycle(GetHL(), Fetch8()); return 12;
     case 0x37: // SCF
         SetFlag(N, false);
         SetFlag(HF, false);
@@ -526,7 +546,7 @@ auto CPU::Execute(uint8_t opcode) -> int {
         return 4;
     case 0x38: return RelativeJump(GetFlag(CF));
     case 0x39: AddHL(SP); return 8;
-    case 0x3A: { const uint16_t a = GetHL(); A = bus.Read(a); SetHL(static_cast<uint16_t>(a - 1)); return 8; }
+    case 0x3A: { const uint16_t a = GetHL(); A = ReadCycle(a); SetHL(static_cast<uint16_t>(a - 1)); return 8; }
     case 0x3B: --SP; return 8;
     case 0x3C: A = Inc8(A); return 4;
     case 0x3D: A = Dec8(A); return 4;
@@ -576,34 +596,30 @@ auto CPU::Execute(uint8_t opcode) -> int {
 
     case 0xE0: {
         const auto offset = Fetch8();
-        // The write occurs in the third machine cycle, after both fetches.
-        AdvanceCycles(8);
-        bus.Write(static_cast<uint16_t>(0xFF00u + offset), A);
+        // Fetch8 has completed both fetch cycles before the write.
+        WriteCycle(static_cast<uint16_t>(0xFF00u + offset), A);
         return 12;
     }
     case 0xE1: SetHL(Pop16()); return 12;
-    case 0xE2: bus.Write(static_cast<uint16_t>(0xFF00u + C), A); return 8;
+    case 0xE2: WriteCycle(static_cast<uint16_t>(0xFF00u + C), A); return 8;
     case 0xE5: Push16(GetHL()); return 16;
     case 0xE6: AndA(Fetch8()); return 8;
     case 0xE7: return Restart(0x20);
     case 0xE8: {
         // The signed operand is fetched in the second machine cycle.
-        AdvanceCycles(4);
         const auto offset = static_cast<std::int8_t>(Fetch8());
         SP = AddSignedToSP(offset);
         return 16;
     }
     case 0xE9: PC = GetHL(); return 4;
-    case 0xEA: { const uint16_t address = Fetch16(); bus.Write(address, A); return 16; }
+    case 0xEA: { const uint16_t address = Fetch16(); WriteCycle(address, A); return 16; }
     case 0xEE: XorA(Fetch8()); return 8;
     case 0xEF: return Restart(0x28);
 
     case 0xF0: {
         const auto offset = Fetch8();
-        // LDH A,(a8) reads on its third machine cycle. Advance the
-        // peripherals through opcode and operand fetch before sampling IO.
-        AdvanceCycles(8);
-        A = bus.Read(static_cast<uint16_t>(0xFF00u + offset));
+        // The two fetch cycles precede the IO read cycle.
+        A = ReadCycle(static_cast<uint16_t>(0xFF00u + offset));
         return 12;
     }
     case 0xF1: {
@@ -612,19 +628,18 @@ auto CPU::Execute(uint8_t opcode) -> int {
         F = static_cast<uint8_t>(value & 0xF0); // Low nibble of F is always zero.
         return 12;
     }
-    case 0xF2: A = bus.Read(static_cast<uint16_t>(0xFF00u + C)); return 8;
+    case 0xF2: A = ReadCycle(static_cast<uint16_t>(0xFF00u + C)); return 8;
     case 0xF3: ime = false; imeEnableDelay = 0; return 4; // DI
     case 0xF5: Push16(static_cast<uint16_t>((static_cast<uint16_t>(A) << 8) | (F & 0xF0))); return 16;
     case 0xF6: OrA(Fetch8()); return 8;
     case 0xF7: return Restart(0x30);
     case 0xF8: {
-        AdvanceCycles(4);
         const auto offset = static_cast<std::int8_t>(Fetch8());
         SetHL(AddSignedToSP(offset));
         return 12;
     }
     case 0xF9: SP = GetHL(); return 8;
-    case 0xFA: A = bus.Read(Fetch16()); return 16;
+    case 0xFA: A = ReadCycle(Fetch16()); return 16;
     case 0xFB: if (!ime && imeEnableDelay == 0) { imeEnableDelay = 2; } return 4;
     case 0xFE: CpA(Fetch8()); return 8;
     case 0xFF: return Restart(0x38);
@@ -640,7 +655,7 @@ auto CPU::PendingInterrupts() -> uint8_t {
     constexpr uint16_t IE = 0xFFFF;
     constexpr uint16_t IF = 0xFF0F;
 
-    return static_cast<uint8_t>(bus.Read(IE) & bus.Read(IF) & 0x1Fu);
+    return static_cast<uint8_t>(bus.Read(IE, BusAccess::Internal) & bus.Read(IF, BusAccess::Internal) & 0x1Fu);
 }
 
 auto CPU::ServiceInterrupt(uint8_t pending) -> int {
@@ -674,7 +689,7 @@ auto CPU::ServiceInterrupt(uint8_t pending) -> int {
         // --------------------------------------------
 
         uint8_t interruptFlags =
-            bus.Read(IF);
+            bus.Read(IF, BusAccess::Internal);
 
         interruptFlags =
             static_cast<uint8_t>(
@@ -682,14 +697,15 @@ auto CPU::ServiceInterrupt(uint8_t pending) -> int {
                 & static_cast<uint8_t>(~mask)
                 );
 
-        bus.Write(IF, interruptFlags);
+        bus.Write(IF, interruptFlags, BusAccess::Internal);
 
         // --------------------------------------------
         // Equivalent to CALL interrupt vector
         // --------------------------------------------
 
-        Push16(PC);
-
+        AdvanceCycles(8); // two interrupt-entry idle cycles
+        Push16(PC, false);
+        AdvanceCycles(4); // interrupt vector selection follows both stack writes
         PC = vectors[bit];
 
         // 5 M-cycles = 20 clock cycles

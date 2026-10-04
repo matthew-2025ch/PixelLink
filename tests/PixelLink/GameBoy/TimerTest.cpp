@@ -183,6 +183,36 @@ namespace PixelLink::Test::GameBoy::TimerTest {
             CHECK(timer.Read(TAC) == 0xFD);
         }
 
+        void testWritesDuringReloadCycle() {
+            // Independently check all four T-cycles and the first cycle
+            // after reload, as well as the earlier cancellable delay.
+            for (uint32_t offset = 0; offset <= 4; ++offset) {
+                Timer timer;
+                timer.Write(TMA, 0x42);
+                timer.Write(TIMA, 0xFF);
+                timer.Write(TAC, 0x05);
+                timer.Tick(20 + offset);
+                CHECK(timer.ConsumeInterruptRequest());
+                timer.Write(TIMA, 0x7F);
+                CHECK(timer.Read(TIMA) == (offset < 4 ? 0x42 : 0x7F));
+                timer.Write(TMA, 0x23);
+                CHECK(timer.Read(TIMA) == (offset < 4 ? 0x23 : 0x7F));
+                CHECK(timer.Read(TMA) == 0x23);
+                CHECK(!timer.ConsumeInterruptRequest());
+            }
+            for (uint32_t offset = 0; offset < 4; ++offset) {
+                Timer timer;
+                timer.Write(TMA, 0x42);
+                timer.Write(TIMA, 0xFF);
+                timer.Write(TAC, 0x05);
+                timer.Tick(16 + offset);
+                timer.Write(TIMA, 0x7F);
+                timer.Tick(4 - offset);
+                CHECK(timer.Read(TIMA) == 0x7F);
+                CHECK(!timer.ConsumeInterruptRequest());
+            }
+        }
+
     } // namespace
 
     void run() {
@@ -207,6 +237,7 @@ namespace PixelLink::Test::GameBoy::TimerTest {
         );
 
         Test::run("Timer / TAC Read mask", testTacReadMask);
+        Test::run("Timer / reload write boundaries", testWritesDuringReloadCycle);
     }
 
 } // namespace PixelLink::Test::TimerTest

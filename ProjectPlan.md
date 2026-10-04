@@ -69,8 +69,8 @@
      - [x] STAT interrupts
      - [x] VRAM / OAM access rules
      - [x] Bus-side CPU VRAM / OAM access enforcement
-     - [x] Variable mode 3 timing
-     - [x] Pixel FIFO / fetcher if needed
+     - [x] Variable mode 3 timing (SCX, window and sprite fetch penalties; selected Mooneye timing ROMs pass)
+     - [ ] Pixel FIFO / fetcher if needed
 
 8. DMA
    - Part 1: Bus access model
@@ -113,11 +113,21 @@
    - [x] Test ROM runner and initial Mooneye acceptance tests
    - [x] HALT bug
    - [x] HALT, timer read, and OAM DMA boundary timing regressions
-   - [ ] Broader hardware accuracy suite (PPU, timer, DMA, serial)
+   - [x] Broader hardware accuracy suite (40 Mooneye ROMs integrated into GameBoyTests: CPU, PPU, timer, DMA, serial)
+   - [x] HardwareAccuracy::run() registered in TestSuites.hpp; argument-free main runs all selected ROMs
+   - [x] TIMA/TMA reload-cycle write behavior and FF46 reads during DMA
+   - [x] CPU memory access timing within each instruction and DMA start / restart / completion / source rules
+   - [x] PPU mode / sprite / SCX timing, LCD on/off and STAT / LYC / VBlank boundaries covered by the selected suite
+   - [x] DMG serial transfer engine, interrupt and DMG ABC post-boot clock phase
+   - Current measured result: 40/40 ROMs pass (previous baseline: 26/40); GameBoyTests and AudioFrontendTests also pass.
+     See [HardwareAccuracy.md](HardwareAccuracy.md) for results and the next target.
 
 13. APU
    - [x] Four audio channels: CH1 sweep, CH2 pulse, CH3 wave, CH4 noise
    - [x] Stereo mixer and SDL Audio playback
+   - [x] Automatic SDL3.dll deployment for Windows frontend executables
+   - [x] Audio frontend integration regression (SDL dummy driver)
+   - [ ] Verify audible output from local game ROMs on a real audio device
    - [ ] Advanced APU accuracy (DIV sync, wave RAM access, trigger quirks)
 
 ## Stage 2: WLAN Remote Controlling

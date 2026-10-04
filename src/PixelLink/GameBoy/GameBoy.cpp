@@ -11,11 +11,11 @@ GameBoy::GameBoy()
       ppu_(bus_),
       cpu_(bus_) {
     bus_.AttachTimer(timer_);
+    bus_.AttachSerial(serial_);
     bus_.AttachJoypad(joypad_);
     bus_.AttachAPU(apu_);
     cpu_.SetCycleCallback([this](const std::uint32_t cycles) {
         TickDevices(cycles);
-        advancedCycles_ += cycles;
     });
 }
 
@@ -27,11 +27,9 @@ auto GameBoy::LoadROM(
 }
 
 auto GameBoy::Step() -> int {
-    advancedCycles_ = 0;
-    const int tCycles = cpu_.Step();
-    TickDevices(static_cast<std::uint32_t>(tCycles) - advancedCycles_);
-
-    return tCycles;
+    // CPU advances every fetch, memory access and idle cycle through its
+    // callback; no peripheral time is deferred until the end of the opcode.
+    return cpu_.Step();
 }
 
 auto GameBoy::TickDevices(const std::uint32_t elapsed) -> void {
@@ -42,6 +40,10 @@ auto GameBoy::TickDevices(const std::uint32_t elapsed) -> void {
     }
 
     bus_.Tick(elapsed);
+    serial_.Tick(elapsed);
+    if (serial_.ConsumeInterruptRequest()) {
+        bus_.RequestInterrupt(0x08);
+    }
     ppu_.Step(elapsed);
     apu_.Tick(elapsed);
 }
@@ -90,6 +92,10 @@ auto GameBoy::GetPPU() const noexcept -> const PPU& {
 
 auto GameBoy::GetTimer() noexcept -> Timer& {
     return timer_;
+}
+
+auto GameBoy::GetSerial() noexcept -> Serial& {
+    return serial_;
 }
 
 auto GameBoy::GetTimer() const noexcept -> const Timer& {
