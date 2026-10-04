@@ -72,5 +72,7 @@ rendering remains scanline based. A complete pixel FIFO/fetcher and arbitrary
 mid-scanline register changes are not validated by this subset.
 
 Windows frontend targets deploy SDL3.dll beside their executables after
-linking when SDL is shared. `AudioFrontendTests` uses SDL's dummy audio driver;
-audible playback on a physical device remains a separate check.
+linking when SDL is shared. `FrontendTests` first runs `Frontend::AudioTest::run()`
+with SDL's dummy audio driver, restores the previous driver selection, then
+opens the interactive game test. Audible playback on a physical device
+remains a separate check; close the game window to finish the combined suite.

@@ -119,14 +119,14 @@
    - [x] CPU memory access timing within each instruction and DMA start / restart / completion / source rules
    - [x] PPU mode / sprite / SCX timing, LCD on/off and STAT / LYC / VBlank boundaries covered by the selected suite
    - [x] DMG serial transfer engine, interrupt and DMG ABC post-boot clock phase
-   - Current measured result: 40/40 ROMs pass (previous baseline: 26/40); GameBoyTests and AudioFrontendTests also pass.
+   - Latest hardware run: 40/40 ROMs pass (previous baseline: 26/40); GameBoyTests passes. Frontend audio checks are integrated into FrontendTests.
      See [HardwareAccuracy.md](HardwareAccuracy.md) for results and the next target.
 
 13. APU
    - [x] Four audio channels: CH1 sweep, CH2 pulse, CH3 wave, CH4 noise
    - [x] Stereo mixer and SDL Audio playback
    - [x] Automatic SDL3.dll deployment for Windows frontend executables
-   - [x] Audio frontend integration regression (SDL dummy driver)
+   - [x] Frontend::AudioTest::run() integrated into FrontendTests (SDL dummy driver; restored before the interactive game)
    - [ ] Verify audible output from local game ROMs on a real audio device
    - [ ] Advanced APU accuracy (DIV sync, wave RAM access, trigger quirks)
 

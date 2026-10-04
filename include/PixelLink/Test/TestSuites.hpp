@@ -74,6 +74,10 @@ namespace GameBoy{
 } // namespace GameBoy
 
 namespace Frontend {
+    namespace AudioTest {
+        void run();
+    }
+
     namespace EmulatorTest {
         void run();
     }

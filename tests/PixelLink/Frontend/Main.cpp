@@ -10,15 +10,16 @@ int main(int argc, char* argv[]) {
     try {
         std::cout
             << "==============================\n"
-            << " Emulator Integration Test\n"
+            << " Frontend Integration Tests\n"
             << "==============================\n\n";
 
+        PixelLink::Test::Frontend::AudioTest::run();
         PixelLink::Test::Frontend::EmulatorTest::run();
     }
     catch (...) {
         std::cerr
             << "\n==============================\n"
-            << " TEST FAILED\n"
+            << " TESTS FAILED\n"
             << "==============================\n";
 
         return 1;
@@ -26,7 +27,7 @@ int main(int argc, char* argv[]) {
 
     std::cout
         << "\n==============================\n"
-        << " TEST PASSED\n"
+        << " ALL TESTS PASSED\n"
         << "==============================\n";
 
     return 0;

@@ -12,7 +12,13 @@ ROM 清单统一放在 `tests/PixelLink/GameBoy/HardwareAccuracy.cpp`，程序�
 
 重新完整构建后的 `GameBoyTests` 与 `AudioFrontendTests` **2/2 CTest 项通过**；统一入口中的 **40/40 ROM 各执行一次并通过**。另行验证了缺失首个 ROM 的情况：该项报告失败，剩余 39 项全部执行且通过，程序返回 1。验证后原始 ROM 已恢复并重新核对哈希。
 
-当前结果：[integrated-tests.xml](out/build/hardware/integrated-tests.xml) 与 [integrated-tests.log](out/integrated-tests.log)；逐项输出见 [LastTest.log](out/build/hardware/Testing/Temporary/LastTest.log)。
+2026-10-04 验收记录：[integrated-tests.xml](out/build/hardware/integrated-tests.xml) 与 [integrated-tests.log](out/integrated-tests.log)；逐项输出见 [LastTest.log](out/build/hardware/Testing/Temporary/LastTest.log)。
+
+## 前端音频入口调整（2026-10-05）
+
+音频集成检查已合并至 `FrontendTests`，入口为 `PixelLink::Test::Frontend::AudioTest::run()`，在 `TestSuites.hpp` 中声明。前端主入口先运行自动音频检查，再运行需要手动关闭的游戏窗口测试；独立 `AudioFrontendTests` 构建目标已移除。
+
+自动检查临时使用 dummy 音频驱动。通过作用域清理关闭其音频子系统，并恢复之前的驱动选择；正常返回或断言异常都会执行清理，SDL 初始化失败时也恢复驱动。后续游戏窗口按原来的音频配置初始化。本次调整完成重新构建，尚未复跑交互窗口或实际听音验收。
 
 40 个 ROM 的 SHA-256 已重新核对，与 [manifest.json](assests/roms/mooneye/manifest.json) 全部一致。测试使用真实指令和硬件访问；未修改 ROM，也未添加按 ROM 名称区分的处理。
 
@@ -38,7 +44,7 @@ ROM 清单统一放在 `tests/PixelLink/GameBoy/HardwareAccuracy.cpp`，程序�
 
 新增或更新了 CPU 访存/栈/中断周期、DMA 启动/重启/结束、LCD 开启与模式边界、VRAM/OAM 读写差异、LY 寄存器、Timer 逐周期重载和串口逐位传输测试。原有指令、渲染、映射器、RTC、存档、输入和 APU 核心测试继续通过。
 
-`AudioFrontendTests` 使用 SDL dummy 音频驱动，验证 APU 样本经前端提交给 SDL、初始化/关闭及重新初始化。它证明音频集成通路可以运行，尚未验证扬声器实际发声或声音是否准确。`FrontendTests.exe` 已重新编译并部署 DLL；本轮未运行需要手动关闭窗口的交互游戏测试。
+2026-10-03/04 的独立音频检查使用 SDL dummy 音频驱动，验证 APU 样本经前端提交给 SDL、初始化/关闭及重新初始化，并通过验收。该检查现通过 `Frontend::AudioTest::run()` 合并到 `FrontendTests`。自动检查尚未验证扬声器实际发声或声音是否准确。
 
 ## 全部 ROM 结果
 
@@ -95,13 +101,14 @@ ROM 清单统一放在 `tests/PixelLink/GameBoy/HardwareAccuracy.cpp`，程序�
 
 构建目录：`out/build/hardware`。2026-10-03 的修复验收结果：[repair-final.xml](out/build/hardware/repair-final.xml) 与 [repair-final.log](out/repair-final.log)。构建产物不进入版本控制。
 
-当前可运行的前端：[FrontendTests.exe](out/build/hardware/FrontendTests.exe)，配套 DLL 在同目录。音频自动检查：[AudioFrontendTests.exe](out/build/hardware/AudioFrontendTests.exe)。
+当前前端入口：[FrontendTests.exe](out/build/hardware/FrontendTests.exe)，配套 DLL 在同目录；程序先执行音频自动检查，再打开游戏窗口。
 
 在已配置的 C++ 开发环境中运行：
 
 ```powershell
-cmake --build out/build/hardware --clean-first --target GameBoyTests FrontendTests AudioFrontendTests
-ctest --test-dir out/build/hardware -R '^(GameBoyTests|AudioFrontendTests)$' --output-on-failure --output-junit integrated-tests.xml
+cmake --build out/build/hardware --clean-first --target GameBoyTests FrontendTests
+ctest --test-dir out/build/hardware -R '^GameBoyTests$' --output-on-failure
+out/build/hardware/FrontendTests.exe
 ```
 
 本机 Ninja/MSVC 的头文件依赖输出使用中文；本轮采用完整重新编译，以避免头文件改动后残留旧布局的目标文件。其它生成器可以按自身的配置正常构建；多配置构建需加 `--config Debug` 和 CTest 的 `-C Debug`。

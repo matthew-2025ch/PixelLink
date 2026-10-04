@@ -1,18 +1,64 @@
 #include <array>
-#include <iostream>
+#include <format>
+#include <optional>
 #include <stdexcept>
+#include <string>
 
 #include <SDL3/SDL.h>
-#include <SDL3/SDL_main.h>
 
 #include <PixelLink/Frontend/Emulator.hpp>
 #include <PixelLink/Test/TestFramework.hpp>
+#include <PixelLink/Test/TestSuites.hpp>
 
+namespace PixelLink::Test::Frontend::AudioTest {
 namespace {
+
+class ScopedDummyAudio {
+public:
+    ScopedDummyAudio() {
+        if (const auto* driver = SDL_GetHint(SDL_HINT_AUDIO_DRIVER)) {
+            previousDriver_ = driver;
+        }
+        if (!SDL_SetHintWithPriority(
+                SDL_HINT_AUDIO_DRIVER, "dummy", SDL_HINT_OVERRIDE)) {
+            throw std::runtime_error(std::format(
+                "SDL audio driver selection failed: {}", SDL_GetError()));
+        }
+        if (!SDL_InitSubSystem(SDL_INIT_AUDIO)) {
+            const auto error = std::format(
+                "SDL audio init failed: {}", SDL_GetError());
+            RestoreDriver();
+            throw std::runtime_error(error);
+        }
+    }
+
+    ~ScopedDummyAudio() {
+        SDL_QuitSubSystem(SDL_INIT_AUDIO);
+        RestoreDriver();
+    }
+
+    ScopedDummyAudio(const ScopedDummyAudio&) = delete;
+    ScopedDummyAudio& operator=(const ScopedDummyAudio&) = delete;
+
+private:
+    std::optional<std::string> previousDriver_;
+
+    void RestoreDriver() noexcept {
+        // Restore the selected driver on success and on exception so the
+        // following interactive game uses the user's real audio backend.
+        if (previousDriver_) {
+            SDL_SetHintWithPriority(SDL_HINT_AUDIO_DRIVER,
+                previousDriver_->c_str(), SDL_HINT_OVERRIDE);
+        } else {
+            SDL_ResetHint(SDL_HINT_AUDIO_DRIVER);
+        }
+    }
+};
 
 void testAutomaticAudioPlayback() {
     using PixelLink::Frontend::Emulator;
 
+    ScopedDummyAudio audio;
     Emulator emulator;
     CHECK(emulator.InitializeAudio());
     CHECK(emulator.IsAudioInitialized());
@@ -40,21 +86,8 @@ void testAutomaticAudioPlayback() {
 
 } // namespace
 
-int main(int argc, char* argv[]) {
-    (void)argc;
-    (void)argv;
-    SDL_SetHint(SDL_HINT_AUDIO_DRIVER, "dummy");
-    if (!SDL_Init(SDL_INIT_AUDIO)) {
-        std::cerr << "SDL audio init failed: " << SDL_GetError() << '\n';
-        return 1;
-    }
-
-    int result = 0;
-    try {
-        PixelLink::Test::run("Frontend / automatic APU audio", testAutomaticAudioPlayback);
-    } catch (const std::exception&) {
-        result = 1;
-    }
-    SDL_Quit();
-    return result;
+void run() {
+    Test::run("Frontend / automatic APU audio", testAutomaticAudioPlayback);
 }
+
+} // namespace PixelLink::Test::Frontend::AudioTest

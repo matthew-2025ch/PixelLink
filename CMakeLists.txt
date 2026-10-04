@@ -133,6 +133,7 @@ set_tests_properties(GameBoyTests PROPERTIES LABELS accuracy TIMEOUT 4800)
 
 add_executable(FrontendTests
     tests/PixelLink/Frontend/Main.cpp
+    tests/PixelLink/Frontend/AudioTest.cpp
     tests/PixelLink/Frontend/EmulatorTest.cpp
 )
 
@@ -149,14 +150,6 @@ target_compile_definitions(FrontendTests
 add_test(
     NAME FrontendTests
     COMMAND FrontendTests
-)
-
-add_executable(AudioFrontendTests
-    tests/PixelLink/Frontend/AudioTest.cpp
-)
-
-target_link_libraries(AudioFrontendTests
-    PRIVATE PixelLink::Emulator
 )
 
 # Windows searches beside the executable for SDL's runtime DLL. Resolve the
@@ -177,9 +170,3 @@ function(pixellink_deploy_sdl_runtime target)
 endfunction()
 
 pixellink_deploy_sdl_runtime(FrontendTests)
-pixellink_deploy_sdl_runtime(AudioFrontendTests)
-
-add_test(
-    NAME AudioFrontendTests
-    COMMAND AudioFrontendTests
-)
