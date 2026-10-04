@@ -1,16 +1,10 @@
-#include <iostream>
-
+#include <PixelLink/Test/Logger.hpp>
 #include <PixelLink/Test/TestSuites.hpp>
 
 using namespace PixelLink::Test::GameBoy;
 
 int main() {
-    try {
-        std::cout
-            << "==============================\n"
-            << " Game Boy Core Tests\n"
-            << "==============================\n\n";
-
+    return PixelLink::Test::RunTestProgram("GameBoyTests", "Game Boy Core Tests", [] {
         APUTest::run();
         BusTest::run();
         CartridgeTest::run();
@@ -29,20 +23,5 @@ int main() {
         TimerIntegrationTest::run();
         TimerTest::run();
         PixelLink::Tests::Gameboy::HardwareAccuracy::run();
-    }
-    catch (...) {
-        std::cerr
-            << "\n==============================\n"
-            << " TESTS FAILED\n"
-            << "==============================\n";
-
-        return 1;
-    }
-
-    std::cout
-        << "\n==============================\n"
-        << " ALL TESTS PASSED\n"
-        << "==============================\n";
-
-    return 0;
+    });
 }

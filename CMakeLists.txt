@@ -19,6 +19,25 @@ add_subdirectory(
     EXCLUDE_FROM_ALL
 )
 
+function(pixellink_add_spdlog)
+    # Keep these options local: SDL can stay shared while test logging is static.
+    set(BUILD_SHARED_LIBS OFF)
+    set(SPDLOG_BUILD_ALL OFF)
+    set(SPDLOG_BUILD_SHARED OFF)
+    set(SPDLOG_USE_STD_FORMAT ON)
+    set(SPDLOG_FMT_EXTERNAL OFF)
+    set(SPDLOG_FMT_EXTERNAL_HO OFF)
+    set(SPDLOG_BUILD_EXAMPLE OFF)
+    set(SPDLOG_BUILD_EXAMPLE_HO OFF)
+    set(SPDLOG_BUILD_TESTS OFF)
+    set(SPDLOG_BUILD_TESTS_HO OFF)
+    set(SPDLOG_BUILD_BENCH OFF)
+    set(SPDLOG_INSTALL OFF)
+    add_subdirectory(external/spdlog EXCLUDE_FROM_ALL)
+endfunction()
+
+pixellink_add_spdlog()
+
 # ------------------------------------------------------------
 # Game Boy emulator core
 # ------------------------------------------------------------
@@ -86,6 +105,16 @@ target_link_libraries(PixelLinkEmulator
 
 enable_testing()
 
+add_library(PixelLinkTestSupport STATIC
+    "src/PixelLink/Test/Logger.cpp"
+)
+add_library(PixelLink::TestSupport ALIAS PixelLinkTestSupport)
+target_include_directories(PixelLinkTestSupport PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(PixelLinkTestSupport PUBLIC spdlog::spdlog)
+target_compile_definitions(PixelLinkTestSupport PRIVATE
+    PIXELLINK_TEST_LOG_DIR="${CMAKE_BINARY_DIR}/logs"
+)
+
 add_executable(GameBoyTests
     tests/PixelLink/GameBoy/Main.cpp
     tests/PixelLink/GameBoy/APUTest.cpp
@@ -111,6 +140,7 @@ add_executable(GameBoyTests
 target_link_libraries(GameBoyTests
     PRIVATE
         PixelLink::GameBoy
+        PixelLink::TestSupport
 )
 
 target_compile_definitions(GameBoyTests
@@ -140,6 +170,7 @@ add_executable(FrontendTests
 target_link_libraries(FrontendTests
     PRIVATE
         PixelLink::Emulator
+        PixelLink::TestSupport
 )
 
 target_compile_definitions(FrontendTests

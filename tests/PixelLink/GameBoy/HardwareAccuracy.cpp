@@ -4,7 +4,7 @@
 #include <format>
 #include <stdexcept>
 
-#include <PixelLink/Test/MooneyeRunner.hpp>
+#include <PixelLink/Test/GameBoy/MooneyeRunner.hpp>
 #include <PixelLink/Test/TestFramework.hpp>
 #include <PixelLink/Test/TestSuites.hpp>
 

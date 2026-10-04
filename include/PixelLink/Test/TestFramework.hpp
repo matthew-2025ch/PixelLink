@@ -1,9 +1,11 @@
 #pragma once
 
+#include <chrono>
 #include <format>
-#include <iostream>
 #include <stdexcept>
 #include <string_view>
+
+#include <PixelLink/Test/Logger.hpp>
 
 namespace PixelLink::Test {
 
@@ -26,23 +28,26 @@ void run(
     std::string_view name,
     Func test
 ) {
+    const auto start = std::chrono::steady_clock::now();
+    const auto elapsedMilliseconds = [&] {
+        return std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - start).count();
+    };
+
     try {
         test();
 
-        std::cout
-            << "[PASS] "
-            << name
-            << '\n';
+        GetLogger().info("[PASS] {} ({:.2f} ms)", name, elapsedMilliseconds());
     }
     catch (const std::exception& e) {
-        std::cerr
-            << "[FAIL] "
-            << name
-            << '\n'
-            << "       "
-            << e.what()
-            << '\n';
+        GetLogger().error("[FAIL] {} ({:.2f} ms)\n       {}",
+            name, elapsedMilliseconds(), e.what());
 
+        throw;
+    }
+    catch (...) {
+        GetLogger().error("[FAIL] {} ({:.2f} ms)\n       Unknown exception",
+            name, elapsedMilliseconds());
         throw;
     }
 }

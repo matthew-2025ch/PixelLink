@@ -115,6 +115,7 @@
    - [x] HALT, timer read, and OAM DMA boundary timing regressions
    - [x] Broader hardware accuracy suite (40 Mooneye ROMs integrated into GameBoyTests: CPU, PPU, timer, DMA, serial)
    - [x] HardwareAccuracy::run() registered in TestSuites.hpp; argument-free main runs all selected ROMs
+   - [x] Shared spdlog test logging (console, timestamped run files, ten-record retention, case duration and failure diagnostics)
    - [x] TIMA/TMA reload-cycle write behavior and FF46 reads during DMA
    - [x] CPU memory access timing within each instruction and DMA start / restart / completion / source rules
    - [x] PPU mode / sprite / SCX timing, LCD on/off and STAT / LYC / VBlank boundaries covered by the selected suite
