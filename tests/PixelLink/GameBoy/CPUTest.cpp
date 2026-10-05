@@ -2,6 +2,7 @@
 
 #include <PixelLink/GameBoy/Bus.hpp>
 #include <PixelLink/GameBoy/CPU.hpp>
+#include <PixelLink/Test/GameBoy/CPUAccess.hpp>
 #include <PixelLink/Test/TestFramework.hpp>
 #include <PixelLink/Test/TestUtils.hpp>
 
@@ -20,7 +21,7 @@ bool flagSet(
     const CPU& cpu,
     uint8_t flag
 ) {
-    return (cpu.F & flag) != 0;
+    return (CPUAccess::F(cpu) & flag) != 0;
 }
 
 void testLoadAddFlags() {
@@ -36,13 +37,13 @@ void testLoadAddFlags() {
     });
 
     CHECK(cpu.Step() == 8);
-    CHECK(cpu.A == 0x0F);
+    CHECK(CPUAccess::A(cpu) == 0x0F);
 
     CHECK(cpu.Step() == 8);
-    CHECK(cpu.B == 0x01);
+    CHECK(CPUAccess::B(cpu) == 0x01);
 
     CHECK(cpu.Step() == 4);
-    CHECK(cpu.A == 0x10);
+    CHECK(CPUAccess::A(cpu) == 0x10);
 
     CHECK(!flagSet(cpu, FLAG_Z));
     CHECK(!flagSet(cpu, FLAG_N));
@@ -50,7 +51,7 @@ void testLoadAddFlags() {
     CHECK(!flagSet(cpu, FLAG_C));
 
     CHECK(cpu.Step() == 8);
-    CHECK(cpu.A == 0x00);
+    CHECK(CPUAccess::A(cpu) == 0x00);
 
     CHECK(flagSet(cpu, FLAG_Z));
     CHECK(!flagSet(cpu, FLAG_N));
@@ -58,7 +59,7 @@ void testLoadAddFlags() {
     CHECK(flagSet(cpu, FLAG_C));
 
     CHECK(cpu.Step() == 4);
-    CHECK(cpu.halted);
+    CHECK(CPUAccess::halted(cpu));
 }
 
 void testIncDec() {
@@ -77,10 +78,10 @@ void testIncDec() {
     CHECK(flagSet(cpu, FLAG_C));
 
     CHECK(cpu.Step() == 8);
-    CHECK(cpu.B == 0x0F);
+    CHECK(CPUAccess::B(cpu) == 0x0F);
 
     CHECK(cpu.Step() == 4);
-    CHECK(cpu.B == 0x10);
+    CHECK(CPUAccess::B(cpu) == 0x10);
 
     CHECK(!flagSet(cpu, FLAG_Z));
     CHECK(!flagSet(cpu, FLAG_N));
@@ -88,7 +89,7 @@ void testIncDec() {
     CHECK(flagSet(cpu, FLAG_C));
 
     CHECK(cpu.Step() == 4);
-    CHECK(cpu.B == 0x0F);
+    CHECK(CPUAccess::B(cpu) == 0x0F);
 
     CHECK(!flagSet(cpu, FLAG_Z));
     CHECK(flagSet(cpu, FLAG_N));
@@ -114,7 +115,7 @@ void testAdcSbc() {
     cpu.Step();
 
     CHECK(cpu.Step() == 8);
-    CHECK(cpu.A == 0x00);
+    CHECK(CPUAccess::A(cpu) == 0x00);
 
     CHECK(flagSet(cpu, FLAG_Z));
     CHECK(!flagSet(cpu, FLAG_N));
@@ -125,7 +126,7 @@ void testAdcSbc() {
     cpu.Step();
 
     CHECK(cpu.Step() == 8);
-    CHECK(cpu.A == 0xFF);
+    CHECK(CPUAccess::A(cpu) == 0xFF);
 
     CHECK(!flagSet(cpu, FLAG_Z));
     CHECK(flagSet(cpu, FLAG_N));
@@ -147,7 +148,7 @@ void testSubAndCp() {
     cpu.Step();
 
     CHECK(cpu.Step() == 8);
-    CHECK(cpu.A == 0x0F);
+    CHECK(CPUAccess::A(cpu) == 0x0F);
 
     CHECK(!flagSet(cpu, FLAG_Z));
     CHECK(flagSet(cpu, FLAG_N));
@@ -156,7 +157,7 @@ void testSubAndCp() {
 
     CHECK(cpu.Step() == 8);
 
-    CHECK(cpu.A == 0x0F);
+    CHECK(CPUAccess::A(cpu) == 0x0F);
     CHECK(flagSet(cpu, FLAG_Z));
     CHECK(flagSet(cpu, FLAG_N));
     CHECK(!flagSet(cpu, FLAG_H));
@@ -184,18 +185,18 @@ void testConditionalJump() {
     CHECK(flagSet(cpu, FLAG_Z));
 
     CHECK(cpu.Step() == 12);
-    CHECK(cpu.PC == 0x0108);
+    CHECK(CPUAccess::PC(cpu) == 0x0108);
 
     cpu.Step();
 
     CHECK(!flagSet(cpu, FLAG_Z));
 
     CHECK(cpu.Step() == 8);
-    CHECK(cpu.PC == 0x010C);
+    CHECK(CPUAccess::PC(cpu) == 0x010C);
 
     cpu.Step();
 
-    CHECK(cpu.A == 0x42);
+    CHECK(CPUAccess::A(cpu) == 0x42);
 }
 
 void testCallReturn() {
@@ -215,25 +216,25 @@ void testCallReturn() {
 
     CHECK(cpu.Step() == 24);
 
-    CHECK(cpu.PC == 0x0200);
-    CHECK(cpu.SP == 0xFFFC);
+    CHECK(CPUAccess::PC(cpu) == 0x0200);
+    CHECK(CPUAccess::SP(cpu) == 0xFFFC);
 
     CHECK(bus.Read(0xFFFC) == 0x03);
     CHECK(bus.Read(0xFFFD) == 0x01);
 
     CHECK(cpu.Step() == 8);
-    CHECK(cpu.B == 0x99);
+    CHECK(CPUAccess::B(cpu) == 0x99);
 
     CHECK(cpu.Step() == 16);
 
-    CHECK(cpu.PC == 0x0103);
-    CHECK(cpu.SP == 0xFFFE);
+    CHECK(CPUAccess::PC(cpu) == 0x0103);
+    CHECK(CPUAccess::SP(cpu) == 0xFFFE);
 
     CHECK(cpu.Step() == 8);
-    CHECK(cpu.A == 0x42);
+    CHECK(CPUAccess::A(cpu) == 0x42);
 
     CHECK(cpu.Step() == 4);
-    CHECK(cpu.halted);
+    CHECK(CPUAccess::halted(cpu));
 }
 
 void testPushPop() {
@@ -250,25 +251,25 @@ void testPushPop() {
 
     CHECK(cpu.Step() == 12);
 
-    CHECK(cpu.B == 0x12);
-    CHECK(cpu.C == 0x34);
+    CHECK(CPUAccess::B(cpu) == 0x12);
+    CHECK(CPUAccess::C(cpu) == 0x34);
 
     CHECK(cpu.Step() == 16);
 
-    CHECK(cpu.SP == 0xFFFC);
+    CHECK(CPUAccess::SP(cpu) == 0xFFFC);
     CHECK(bus.Read(0xFFFC) == 0x34);
     CHECK(bus.Read(0xFFFD) == 0x12);
 
     CHECK(cpu.Step() == 12);
 
-    CHECK(cpu.B == 0x00);
-    CHECK(cpu.C == 0x00);
+    CHECK(CPUAccess::B(cpu) == 0x00);
+    CHECK(CPUAccess::C(cpu) == 0x00);
 
     CHECK(cpu.Step() == 12);
 
-    CHECK(cpu.B == 0x12);
-    CHECK(cpu.C == 0x34);
-    CHECK(cpu.SP == 0xFFFE);
+    CHECK(CPUAccess::B(cpu) == 0x12);
+    CHECK(CPUAccess::C(cpu) == 0x34);
+    CHECK(CPUAccess::SP(cpu) == 0xFFFE);
 }
 
 void testPopAFMask() {
@@ -286,17 +287,17 @@ void testPopAFMask() {
     });
 
     CHECK(cpu.Step() == 12);
-    CHECK(cpu.SP == 0xC000);
+    CHECK(CPUAccess::SP(cpu) == 0xC000);
 
     CHECK(cpu.Step() == 12);
 
-    CHECK(cpu.A == 0x12);
-    CHECK(cpu.F == 0xF0);
-    CHECK(cpu.SP == 0xC002);
+    CHECK(CPUAccess::A(cpu) == 0x12);
+    CHECK(CPUAccess::F(cpu) == 0xF0);
+    CHECK(CPUAccess::SP(cpu) == 0xC002);
 
     CHECK(cpu.Step() == 16);
 
-    CHECK(cpu.SP == 0xC000);
+    CHECK(CPUAccess::SP(cpu) == 0xC000);
     CHECK(bus.Read(0xC000) == 0xF0);
     CHECK(bus.Read(0xC001) == 0x12);
 }
@@ -318,8 +319,8 @@ void testMemoryAndCB() {
 
     CHECK(cpu.Step() == 12);
 
-    CHECK(cpu.H == 0xC0);
-    CHECK(cpu.L == 0x00);
+    CHECK(CPUAccess::H(cpu) == 0xC0);
+    CHECK(CPUAccess::L(cpu) == 0x00);
 
     CHECK(cpu.Step() == 12);
     CHECK(bus.Read(0xC000) == 0x80);
@@ -348,7 +349,7 @@ void testMemoryAndCB() {
     CHECK(bus.Read(0xC000) == 0x01);
 
     cpu.Step();
-    CHECK(cpu.A == 0x01);
+    CHECK(CPUAccess::A(cpu) == 0x01);
 }
 
 void testAddHL() {
@@ -376,8 +377,8 @@ void testAddHL() {
 
     CHECK(cpu.Step() == 8);
 
-    CHECK(cpu.H == 0x10);
-    CHECK(cpu.L == 0x00);
+    CHECK(CPUAccess::H(cpu) == 0x10);
+    CHECK(CPUAccess::L(cpu) == 0x00);
 
     CHECK(flagSet(cpu, FLAG_Z));
     CHECK(!flagSet(cpu, FLAG_N));
@@ -388,8 +389,8 @@ void testAddHL() {
 
     CHECK(cpu.Step() == 8);
 
-    CHECK(cpu.H == 0x00);
-    CHECK(cpu.L == 0x00);
+    CHECK(CPUAccess::H(cpu) == 0x00);
+    CHECK(CPUAccess::L(cpu) == 0x00);
 
     CHECK(flagSet(cpu, FLAG_Z));
     CHECK(!flagSet(cpu, FLAG_N));
@@ -410,10 +411,10 @@ void testSignedSP() {
     });
 
     CHECK(cpu.Step() == 12);
-    CHECK(cpu.SP == 0xFFF8);
+    CHECK(CPUAccess::SP(cpu) == 0xFFF8);
 
     CHECK(cpu.Step() == 16);
-    CHECK(cpu.SP == 0x0000);
+    CHECK(CPUAccess::SP(cpu) == 0x0000);
 
     CHECK(!flagSet(cpu, FLAG_Z));
     CHECK(!flagSet(cpu, FLAG_N));
@@ -421,12 +422,12 @@ void testSignedSP() {
     CHECK(flagSet(cpu, FLAG_C));
 
     CHECK(cpu.Step() == 12);
-    CHECK(cpu.SP == 0x0008);
+    CHECK(CPUAccess::SP(cpu) == 0x0008);
 
     CHECK(cpu.Step() == 12);
 
-    CHECK(cpu.H == 0x00);
-    CHECK(cpu.L == 0x00);
+    CHECK(CPUAccess::H(cpu) == 0x00);
+    CHECK(CPUAccess::L(cpu) == 0x00);
 
     CHECK(!flagSet(cpu, FLAG_Z));
     CHECK(!flagSet(cpu, FLAG_N));
@@ -451,10 +452,10 @@ void testDAA() {
     cpu.Step();
     cpu.Step();
 
-    CHECK(cpu.A == 0x3C);
+    CHECK(CPUAccess::A(cpu) == 0x3C);
 
     CHECK(cpu.Step() == 4);
-    CHECK(cpu.A == 0x42);
+    CHECK(CPUAccess::A(cpu) == 0x42);
 
     CHECK(!flagSet(cpu, FLAG_Z));
     CHECK(!flagSet(cpu, FLAG_N));
@@ -465,7 +466,7 @@ void testDAA() {
     cpu.Step();
 
     CHECK(cpu.Step() == 4);
-    CHECK(cpu.A == 0x87);
+    CHECK(CPUAccess::A(cpu) == 0x87);
 
     CHECK(!flagSet(cpu, FLAG_Z));
     CHECK(!flagSet(cpu, FLAG_N));

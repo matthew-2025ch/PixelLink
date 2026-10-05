@@ -9,6 +9,14 @@ project(
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+if(MSVC)
+    # UTF-8 source and UI strings, independent of the developer's code page.
+    add_compile_options(/utf-8)
+endif()
+set(PIXELLINK_MSVC_INCLUDE_PREFIX "" CACHE STRING "Optional localized MSVC /showIncludes prefix for Ninja")
+if(MSVC AND NOT PIXELLINK_MSVC_INCLUDE_PREFIX STREQUAL "")
+    set(CMAKE_CL_SHOWINCLUDES_PREFIX "${PIXELLINK_MSVC_INCLUDE_PREFIX}")
+endif()
 
 # ------------------------------------------------------------
 # Dependencies
@@ -90,14 +98,20 @@ target_link_libraries(PixelLinkEmulator
 # PixelLink application
 # ------------------------------------------------------------
 
-# add_executable(PixelLink
-#     src/PixelLink/Main.cpp
-# )
-#
-# target_link_libraries(PixelLink
-#     PRIVATE
-#         PixelLink::Emulator
-# )
+add_library(PixelLinkDesktop STATIC
+    src/PixelLink/Frontend/ROMLibrary.cpp
+    src/PixelLink/Frontend/TextRenderer.cpp
+    src/PixelLink/Frontend/Application.cpp
+)
+target_link_libraries(PixelLinkDesktop PUBLIC PixelLink::Emulator)
+target_compile_definitions(PixelLinkDesktop PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
+if(WIN32)
+    target_link_libraries(PixelLinkDesktop PRIVATE gdi32 user32)
+endif()
+
+add_executable(PixelLink WIN32 src/PixelLink/Main.cpp)
+target_link_libraries(PixelLink PRIVATE PixelLinkDesktop)
+target_compile_definitions(PixelLink PRIVATE PIXELLINK_PROJECT_DIR="${CMAKE_SOURCE_DIR}")
 
 # ------------------------------------------------------------
 # Game Boy tests
@@ -118,11 +132,12 @@ target_compile_definitions(PixelLinkTestSupport PRIVATE
 add_executable(GameBoyTests
     tests/PixelLink/GameBoy/Main.cpp
     tests/PixelLink/GameBoy/APUTest.cpp
+    tests/PixelLink/GameBoy/APUAccuracyTest.cpp
     tests/PixelLink/GameBoy/BusTest.cpp
     tests/PixelLink/GameBoy/CartridgeTest.cpp
     tests/PixelLink/GameBoy/CPUTest.cpp
     tests/PixelLink/GameBoy/CoreTimingTest.cpp
-    tests/PixelLink/GameBoy/HardwareAccuracy.cpp
+    tests/PixelLink/GameBoy/HardwareAccuracyTest.cpp
     tests/PixelLink/GameBoy/InterruptTest.cpp
     tests/PixelLink/GameBoy/JoypadTest.cpp
     tests/PixelLink/GameBoy/MapperFactoryTest.cpp
@@ -146,6 +161,7 @@ target_link_libraries(GameBoyTests
 target_compile_definitions(GameBoyTests
     PRIVATE
         PIXELLINK_PROJECT_DIR="${CMAKE_SOURCE_DIR}"
+        PIXELLINK_APU_TEST_DIR="${CMAKE_BINARY_DIR}/apu-tests"
 )
 
 add_test(
@@ -201,3 +217,28 @@ function(pixellink_deploy_sdl_runtime target)
 endfunction()
 
 pixellink_deploy_sdl_runtime(FrontendTests)
+pixellink_deploy_sdl_runtime(PixelLink)
+
+# ------------------------------------------------------------
+# Desktop application tests
+# ------------------------------------------------------------
+
+add_executable(DesktopTests
+    tests/PixelLink/DesktopTests/Main.cpp
+    tests/PixelLink/DesktopTests/AudioTest.cpp
+    tests/PixelLink/DesktopTests/ROMLibraryTest.cpp
+    tests/PixelLink/DesktopTests/ApplicationTest.cpp
+    tests/PixelLink/DesktopTests/LocalGameTest.cpp
+    tests/PixelLink/DesktopTests/LibraryPreviewTest.cpp
+    tests/PixelLink/DesktopTests/TestUtils.cpp
+    # Reuse the automatic audio check also run by FrontendTests.
+    tests/PixelLink/Frontend/AudioTest.cpp
+)
+target_link_libraries(DesktopTests PRIVATE PixelLinkDesktop PixelLink::TestSupport)
+target_compile_definitions(DesktopTests PRIVATE PIXELLINK_DESKTOP_TEST_DIR="${CMAKE_BINARY_DIR}/desktop-tests")
+target_compile_definitions(DesktopTests PRIVATE PIXELLINK_PROJECT_DIR="${CMAKE_SOURCE_DIR}")
+pixellink_deploy_sdl_runtime(DesktopTests)
+add_test(NAME DesktopTests COMMAND DesktopTests)
+set_tests_properties(DesktopTests PROPERTIES TIMEOUT 90 LABELS "frontend;automatic")
+# The existing FrontendTests intentionally opens a user-controlled game window.
+set_tests_properties(FrontendTests PROPERTIES LABELS "frontend;interactive")

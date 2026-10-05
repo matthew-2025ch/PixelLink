@@ -93,6 +93,13 @@
    - [x] Keyboard input forwarding
    - [x] FrontendTests
    - [x] Emulator / ROM / SDL integration test
+   - [x] Standalone PixelLink SDL application (Chinese UI; no test executable required)
+   - [x] Recursive assests/roms library; external ROM imports and opens copy into the library
+   - [x] ROM selection, search, refresh, native multi-file import and drag/drop
+   - [x] Fresh core per game, enter/exit, pause, mute and focus-loss handling
+   - [x] Manual/periodic/exit battery saves, automatic loading and visible failure recovery
+   - [x] Atomic save replacement and companion save import without overwrites
+   - [x] Bounded DesktopTests for the application, local-game PCM and screenshots
 
 10. Joypad
    - [x] FF00
@@ -120,7 +127,7 @@
    - [x] CPU memory access timing within each instruction and DMA start / restart / completion / source rules
    - [x] PPU mode / sprite / SCX timing, LCD on/off and STAT / LYC / VBlank boundaries covered by the selected suite
    - [x] DMG serial transfer engine, interrupt and DMG ABC post-boot clock phase
-   - Latest hardware run: 40/40 ROMs pass (previous baseline: 26/40); GameBoyTests passes. Frontend audio checks are integrated into FrontendTests.
+   - Latest hardware run: 40/40 Mooneye ROMs plus 12/12 Blargg DMG sound ROMs pass; GameBoyTests has 194 passing cases. Debug and Release automatic CTest suites pass. Native Windows video and WASAPI device checks pass through DesktopTests.
      See [HardwareAccuracy.md](HardwareAccuracy.md) for results and the next target.
 
 13. APU
@@ -128,8 +135,11 @@
    - [x] Stereo mixer and SDL Audio playback
    - [x] Automatic SDL3.dll deployment for Windows frontend executables
    - [x] Frontend::AudioTest::run() integrated into FrontendTests (SDL dummy driver; restored before the interactive game)
-   - [ ] Verify audible output from local game ROMs on a real audio device
-   - [ ] Advanced APU accuracy (DIV sync, wave RAM access, trigger quirks)
+   - [x] Verify local-game stereo PCM and real SDL playback device (Windows WASAPI)
+   - [x] Advanced DMG APU accuracy: real DIV falling edges and DIV writes, power/length behavior, trigger quirks, sweep, wave RAM fetch access and retrigger corruption
+   - [x] All 12 unmodified Blargg dmg_sound ROMs integrated into GameBoyTests; pinned version and SHA-256 manifest
+   - [x] DAC conversion and sample-rate-dependent high-pass filtering
+   - Manual listening remains a user/device acceptance check; automated device/PCM checks cannot judge subjective sound quality. Revision-specific analog and zombie-envelope variations are outside the current DMG test set.
 
 ## Stage 2: WLAN Remote Controlling
 

@@ -8,7 +8,7 @@
 #include <PixelLink/Test/TestFramework.hpp>
 #include <PixelLink/Test/TestSuites.hpp>
 
-namespace PixelLink::Tests::Gameboy::HardwareAccuracy {
+namespace PixelLink::Test::GameBoy::HardwareAccuracy {
 namespace {
 
 // Run the complete checked-in acceptance set in a stable order. An explicit

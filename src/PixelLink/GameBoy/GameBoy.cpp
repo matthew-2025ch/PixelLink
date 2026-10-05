@@ -14,6 +14,7 @@ GameBoy::GameBoy()
     bus_.AttachSerial(serial_);
     bus_.AttachJoypad(joypad_);
     bus_.AttachAPU(apu_);
+    timer_.AttachAPU(apu_);
     cpu_.SetCycleCallback([this](const std::uint32_t cycles) {
         TickDevices(cycles);
     });
@@ -33,7 +34,11 @@ auto GameBoy::Step() -> int {
 }
 
 auto GameBoy::TickDevices(const std::uint32_t elapsed) -> void {
-    timer_.Tick(elapsed);
+    // Keep DIV edges and the oscillator/sample clocks on the same T-cycle.
+    for (std::uint32_t cycle = 0; cycle < elapsed; ++cycle) {
+        timer_.Tick(1);
+        apu_.Tick(1);
+    }
 
     if (timer_.ConsumeInterruptRequest()) {
         bus_.RequestInterrupt(TIMER_INTERRUPT);
@@ -45,7 +50,6 @@ auto GameBoy::TickDevices(const std::uint32_t elapsed) -> void {
         bus_.RequestInterrupt(0x08);
     }
     ppu_.Step(elapsed);
-    apu_.Tick(elapsed);
 }
 
 auto GameBoy::SetButton(

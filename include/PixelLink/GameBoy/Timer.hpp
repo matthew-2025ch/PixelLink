@@ -4,6 +4,8 @@
 
 namespace PixelLink::GameBoy {
 
+class APU;
+
 class Timer {
 public:
     void Tick(uint32_t tCycles);
@@ -12,9 +14,11 @@ public:
     void Write(uint16_t address, uint8_t value);
 
     bool ConsumeInterruptRequest();
+    void AttachAPU(APU& apu) noexcept;
 
 private:
     uint16_t systemCounter_ = 0;
+    APU* apu_ = nullptr; // Non-owning; GameBoy owns both devices.
 
     uint8_t tima_ = 0;
     uint8_t tma_ = 0;

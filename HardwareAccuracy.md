@@ -95,22 +95,85 @@ ROM 清单统一放在 `tests/PixelLink/GameBoy/HardwareAccuracy.cpp`，程序�
 
 本次完成的是所选 DMG 验收子集的全部已知失败。PPU 仍逐行绘图，完整像素 FIFO/fetcher、任意扫描线中途寄存器变化、完整 Mooneye 测试集以及 CGB/SGB 专属行为尚未完成验证。串口启动状态采用预设相位，尚未执行实际 boot ROM，也未实现前端联机功能。
 
-**下一目标：实际游戏的声音验收，再扩展 APU 硬件准确性。** 先确认本地 ROM 在真实音频设备上能发声，检查静音/失真、左右声道与长时间播放；随后覆盖 DIV 同步、wave RAM 访问和触发行为等高级 APU 项。验收时同时复跑当前 40 个 ROM 与核心测试，保持现有通过结果。
+此处原定的 APU 扩展与独立窗口现已实现，2026-10-05 的结果见下方更新。后续可以开展第二阶段局域网控制；完整 PPU FIFO、CGB/SGB、不同芯片修订的模拟音频差异仍属于后续准确性扩展。
+
+## APU 与独立 SDL 应用（2026-10-05）
+
+APU 的帧序列器改为由真实 Timer 的 DIV bit 4 下降沿驱动（内部系统计数器 bit 12），
+包括 CPU 写 DIV 产生的边沿；Timer 与音频振荡器按同一 T-cycle 推进。独立 APU 的测试模式
+仍提供本地分频器，关电时保持分频相位，重新上电从序列器 step 0 开始。
+
+补齐 DMG 关电期间长度计数器保留及写入、额外长度时钟、零长度触发重载、包络时钟重载、
+扫频减法历史和零位移溢出检查、波形样本缓冲与启动延迟、运行期间 wave RAM 访问窗口，
+以及两周期预取阶段的波形重触发损坏。CPU 可访问 RAM 的窗口与重触发损坏窗口分别处理。
+DAC 数字值转换和高通滤波现在随输出采样率计算，并在 DAC 全关时输出静音。
+
+新增 12 个未经修改的 Blargg `dmg_sound` ROM，来源固定为
+[`retrio/gb-test-roms` c240dd7](https://github.com/retrio/gb-test-roms/tree/c240dd7d700e5c0b00a7bbba52b53e4ee67b5f15/dmg_sound)。
+它们通过正常 CPU 执行，并按作者的 A000–A004 内存协议读取结果；没有 ROM 名称对应的硬件捷径。
+清单和 SHA-256 见 [manifest.json](assests/roms/blargg-dmg-sound/manifest.json)。测试在构建目录的
+新临时目录中复制 ROM 并产生存档，不修改游戏库的原始 ROM 或存档。
+
+| Blargg DMG APU ROM | 结果 |
+| --- | --- |
+| 01-registers | PASS |
+| 02-len ctr | PASS |
+| 03-trigger | PASS |
+| 04-sweep | PASS |
+| 05-sweep details | PASS |
+| 06-overflow on trigger | PASS |
+| 07-len sweep period sync | PASS |
+| 08-len ctr during power | PASS |
+| 09-wave read while on | PASS |
+| 10-wave trigger while on | PASS |
+| 11-regs after power | PASS |
+| 12-wave write while on | PASS |
+
+实现依据参考 [Pan Docs / Audio Details](https://gbdev.io/pandocs/Audio_details.html)、
+[Audio Registers](https://gbdev.io/pandocs/Audio_Registers.html) 及原始 ROM 验收结果。
+上述验收覆盖 CPU 可观察的 DMG 行为，不代表所有芯片修订、CGB/SGB 或模拟音频细节完全一致。
+
+独立 `PixelLink` 程序提供中文游戏库，递归扫描统一的 `assests/roms`；从其它位置导入或打开的 ROM 会复制到游戏库。
+支持搜索、鼠标/键盘选择、多文件原生对话框导入、拖放、进入/退出、暂停、静音和电池存档。
+不同游戏使用新的模拟器实例；保存使用完整临时文件替换。保存失败时保留当前游戏并阻止退出。
+操作和构建说明见 [README.md](README.md)。
+
+Release 验收：`GameBoyTests` 中 **194/194** 项通过，包括原有 **40/40 Mooneye** 和
+新增 **12/12 Blargg APU ROM**；`DesktopTests` 的自动音频、导入、窗口、存档和本地游戏检查通过。
+CTest **2/2**，结果保存在 `out/build/release/final-tests.xml` 和 `out/release-validation.log`。
+Debug 同样 **194/194** 核心项、**40/40 Mooneye**、**12/12 APU ROM** 与自动窗口检查通过，
+CTest **2/2**。原生 Windows 视频后端和 WASAPI 真实音频设备的隐藏窗口检查全部通过。
+结果见 `out/debug-validation.log`、`out/native-device-validation.log`。
+
+本地《For the Frogs the Bell Tolls》生成有效的左右声道样本，PCM 峰值约 0.753，
+通过 SDL 成功提交给 Windows WASAPI 真实设备。《Super Breakout》当前标题画面样本为静音，
+已记录这一实际结果，没有将静音数据当作成功发声。自动设备检查验证初始化、样本提交和关闭，
+无法替代人耳判断或确认扬声器的实际音量；听感和长期播放仍可在独立应用中进一步验收。
+
+正式应用：`out/build/release/PixelLink.exe`，SDL3.dll 已自动部署到同目录。
+完整流程测试包含中文路径、递归扫描、同名导入、现有存档保护、按键释放、暂停音频、
+新核心切换、无效 ROM、存档写入失败与恢复、关闭应用前保存和实际游戏库截图。
+CPU 测试访问也改为显式测试支持，Release 不再依赖 `_DEBUG` 暴露寄存器，断言继续使用 `CHECK`。
 
 ## 复跑与产物
 
-构建目录：`out/build/hardware`。2026-10-03 的修复验收结果：[repair-final.xml](out/build/hardware/repair-final.xml) 与 [repair-final.log](out/repair-final.log)。构建产物不进入版本控制。
+2026-10-03/04 的历史构建目录为 `out/build/hardware`，修复验收结果为
+[repair-final.xml](out/build/hardware/repair-final.xml) 与 [repair-final.log](out/repair-final.log)。
+本次构建目录为 `out/build/release` 和 `out/build/verified`；构建产物不进入版本控制。
 
-当前前端入口：[FrontendTests.exe](out/build/hardware/FrontendTests.exe)，配套 DLL 在同目录；程序先执行音频自动检查，再打开游戏窗口。
+当前独立应用：[PixelLink.exe](out/build/release/PixelLink.exe)，配套 SDL3.dll 在同目录。
+`FrontendTests` 保留为交互测试入口；自动窗口流程使用 `DesktopTests`。
 
 在已配置的 C++ 开发环境中运行：
 
 ```powershell
-cmake --build out/build/hardware --clean-first --target GameBoyTests FrontendTests
-ctest --test-dir out/build/hardware -R '^GameBoyTests$' --output-on-failure
-out/build/hardware/FrontendTests.exe
+cmake --build out/build/release --target PixelLink GameBoyTests DesktopTests FrontendTests
+ctest --test-dir out/build/release -R '^(GameBoyTests|DesktopTests)$' --output-on-failure
+out/build/release/PixelLink.exe
 ```
 
-本机 Ninja/MSVC 的头文件依赖输出使用中文；本轮采用完整重新编译，以避免头文件改动后残留旧布局的目标文件。其它生成器可以按自身的配置正常构建；多配置构建需加 `--config Debug` 和 CTest 的 `-C Debug`。
+本机 Ninja/MSVC 的头文件依赖输出使用中文，当前构建通过
+`PIXELLINK_MSVC_INCLUDE_PREFIX` 覆盖乱码识别前缀，恢复头文件依赖跟踪；首次验收也进行了完整重编译。
+具体配置见 README。其它语言或生成器保持默认；多配置构建需加对应的 `--config` 和 CTest 的 `-C`。
 
 ROM 分组、来源和运行器说明见 [ROM README](assests/roms/mooneye/README.md)；项目进度见 [ProjectPlan.md](ProjectPlan.md)。

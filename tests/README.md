@@ -1,10 +1,23 @@
 # Test programs and logging
 
-`GameBoyTests` runs the core suites and all 40 selected Mooneye ROMs.
+`GameBoyTests` runs the core suites, all 40 selected Mooneye ROMs, and all
+12 original Blargg DMG sound ROMs through `APUAccuracyTest::run()`.
+`DesktopTests` runs bounded, automatic SDL audio and application tests: recursive
+ROM discovery, Unicode paths, safe imports, game controls, saves and save-failure
+recovery, local-game PCM, and screenshots. It uses dummy video/audio drivers;
+`DesktopTests --real-audio` selects the real default audio device while keeping
+the test window hidden.
 `FrontendTests` runs the automatic audio check, then opens the interactive
 game test. Close the game window to finish the frontend suite.
 
-Both entry points use `PixelLink::Test::RunTestProgram`. Test cases keep the
+Desktop test sources live in `tests/PixelLink/DesktopTests/`. Each suite exposes
+`PixelLink::Tests::Desktop::xxxTest::run()`, declared in
+`include/PixelLink/Test/TestSuites.hpp` and called from `DesktopTests/Main.cpp`:
+`AudioTest`, `ROMLibraryTest`, `ApplicationTest`, `LocalGameTest`, and
+`LibraryPreviewTest`. `TestUtils` shares fixtures, ROM creation, key events and
+device settings. `AudioTest` reuses the frontend's automatic audio check.
+
+All three entry points use `PixelLink::Test::RunTestProgram`. Test cases keep the
 existing `Test::run` and `CHECK` interfaces. `CHECK` throws on failure;
 `Test::run` logs the case and rethrows. The main wrapper reports the final
 result, flushes logging and returns 0 on success or 1 on failure.
@@ -53,9 +66,9 @@ Windows filenames use hyphens in place of time colons. An existing filename
 advances the filename timestamp by one millisecond to select a fresh record.
 
 The directory retains the newest **10 timestamped run logs in total**, shared
-by `GameBoyTests` and `FrontendTests`. Opening a new log deletes the oldest
+by `GameBoyTests`, `FrontendTests` and `DesktopTests`. Opening a new log deletes the oldest
 managed records beyond that limit. The currently opened log is retained;
-cleanup errors are reported as warnings. The managed files are the two test
+cleanup errors are reported as warnings. The managed files are the three test
 programs' timestamped `.log` records.
 
 The default level is `info`. Set `SPDLOG_LEVEL` to change it without
@@ -85,7 +98,8 @@ developer environment:
 ```powershell
 git submodule update --init --recursive
 cmake -S . -B out/build/hardware -G Ninja -DCMAKE_BUILD_TYPE=Debug
-cmake --build out/build/hardware --target GameBoyTests FrontendTests
+cmake --build out/build/hardware --target PixelLink GameBoyTests DesktopTests FrontendTests
+ctest --test-dir out/build/hardware -R '^(GameBoyTests|DesktopTests)$' --output-on-failure
 ```
 
 For a multi-configuration generator, use `--config Debug` when building.

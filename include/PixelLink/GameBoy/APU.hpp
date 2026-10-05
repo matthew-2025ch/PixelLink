@@ -18,6 +18,10 @@ public:
     [[nodiscard]] auto Read(std::uint16_t address) const noexcept -> std::uint8_t;
     auto Write(std::uint16_t address, std::uint8_t value) noexcept -> void;
     auto Tick(std::uint32_t tCycles) -> void;
+    // The DMG frame sequencer is clocked by falling edges of DIV bit 4.
+    // Standalone APUs use a local divider; GameBoy connects the real Timer.
+    auto SetExternalDividerClock(bool enabled) noexcept -> void;
+    auto ClockDivider() noexcept -> void;
 
     // SDL may request a different PCM rate; the Game Boy clock is unchanged.
     [[nodiscard]] auto SetSampleRate(std::uint32_t sampleRate) noexcept -> bool;
@@ -33,6 +37,9 @@ private:
         std::uint8_t envelopeTimer = 0;
         std::uint8_t position = 0;
         std::uint16_t timer = 0;
+        bool dutyStarted = false;
+        bool firstDuty = true;
+        bool envelopeRunning = false;
     };
 
     struct WaveChannel {
@@ -41,6 +48,8 @@ private:
         std::uint16_t length = 0;
         std::uint16_t timer = 0;
         std::uint8_t position = 0;
+        std::uint8_t sampleBuffer = 0;
+        std::uint8_t accessCycles = 0;
     };
 
     struct NoiseChannel {
@@ -51,6 +60,7 @@ private:
         std::uint8_t envelopeTimer = 0;
         std::uint16_t lfsr = 0x7FFF;
         std::uint32_t timer = 0;
+        bool envelopeRunning = false;
     };
 
     bool powered_ = true;
@@ -65,13 +75,16 @@ private:
     std::uint8_t nr51_ = 0xF3;
     std::uint8_t frameStep_ = 0;
     std::uint16_t frameTimer_ = 0;
+    bool externalDividerClock_ = false;
     std::uint16_t sweepShadow_ = 0;
     std::uint8_t sweepTimer_ = 0;
     bool sweepEnabled_ = false;
+    bool sweepNegated_ = false;
     std::uint32_t sampleRate_ = SAMPLE_RATE;
     std::uint32_t sampleAccumulator_ = 0;
     float highPassLeft_ = 0.0f;
     float highPassRight_ = 0.0f;
+    float highPassFactor_ = 0.996337f;
     std::vector<float> samples_;
 
     [[nodiscard]] static auto PulsePeriod(const PulseChannel& channel) noexcept
@@ -88,7 +101,10 @@ private:
     auto ClockEnvelope(PulseChannel& channel) noexcept -> void;
     auto ClockNoiseEnvelope() noexcept -> void;
     auto ClockSweep() noexcept -> void;
-    [[nodiscard]] auto SweptPeriod() const noexcept -> std::uint16_t;
+    [[nodiscard]] auto SweptPeriod() noexcept -> std::uint16_t;
+    template<class Channel>
+    auto WriteControl(Channel& channel, std::uint8_t oldControl,
+                      std::uint8_t newControl) noexcept -> void;
     auto StepFrameSequencer() noexcept -> void;
     auto EmitSample() -> void;
 };

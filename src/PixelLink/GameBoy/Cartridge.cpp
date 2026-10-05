@@ -52,7 +52,11 @@ auto WriteBytes(
     const uint8_t* bytes,
     std::size_t count
 ) -> void {
-    std::ofstream file(path, std::ios::binary | std::ios::trunc);
+    // Write beside the destination and replace only after the complete data
+    // has been flushed. Failed writes must not truncate the previous save.
+    auto temporary = path;
+    temporary += "." + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + ".tmp";
+    std::ofstream file(temporary, std::ios::binary | std::ios::trunc);
     if (!file) {
         throw std::runtime_error("Failed to open save file: " + path.string());
     }
@@ -62,7 +66,16 @@ auto WriteBytes(
     );
     file.close();
     if (!file) {
+        std::error_code ignored;
+        std::filesystem::remove(temporary, ignored);
         throw std::runtime_error("Failed to write save file: " + path.string());
+    }
+    std::error_code error;
+    std::filesystem::rename(temporary, path, error);
+    if (error) {
+        std::error_code ignored;
+        std::filesystem::remove(temporary, ignored);
+        throw std::runtime_error("Failed to replace save file: " + path.string() + ": " + error.message());
     }
 }
 

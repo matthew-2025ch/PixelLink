@@ -2,6 +2,7 @@
 
 #include <PixelLink/GameBoy/Bus.hpp>
 #include <PixelLink/GameBoy/CPU.hpp>
+#include <PixelLink/Test/GameBoy/CPUAccess.hpp>
 #include <PixelLink/Test/TestFramework.hpp>
 #include <PixelLink/Test/TestUtils.hpp>
 
@@ -27,19 +28,19 @@ void testEIDelay() {
     bus.Write(IE, 0x01);
     bus.Write(IF, 0x01);
 
-    CHECK(cpu.ime == false);
+    CHECK(CPUAccess::ime(cpu) == false);
 
     CHECK(cpu.Step() == 4);
-    CHECK(cpu.PC == 0x0101);
-    CHECK(cpu.ime == false);
+    CHECK(CPUAccess::PC(cpu) == 0x0101);
+    CHECK(CPUAccess::ime(cpu) == false);
 
     CHECK(cpu.Step() == 4);
-    CHECK(cpu.PC == 0x0102);
-    CHECK(cpu.ime == true);
+    CHECK(CPUAccess::PC(cpu) == 0x0102);
+    CHECK(CPUAccess::ime(cpu) == true);
 
     CHECK(cpu.Step() == 20);
-    CHECK(cpu.PC == 0x0040);
-    CHECK(cpu.ime == false);
+    CHECK(CPUAccess::PC(cpu) == 0x0040);
+    CHECK(CPUAccess::ime(cpu) == false);
 }
 
 void testVBlankInterrupt() {
@@ -57,19 +58,19 @@ void testVBlankInterrupt() {
     cpu.Step();
     cpu.Step();
 
-    CHECK(cpu.PC == 0x0102);
-    CHECK(cpu.SP == 0xFFFE);
+    CHECK(CPUAccess::PC(cpu) == 0x0102);
+    CHECK(CPUAccess::SP(cpu) == 0xFFFE);
 
     CHECK(cpu.Step() == 20);
 
-    CHECK(cpu.PC == 0x0040);
+    CHECK(CPUAccess::PC(cpu) == 0x0040);
 
-    CHECK(cpu.SP == 0xFFFC);
+    CHECK(CPUAccess::SP(cpu) == 0xFFFC);
     CHECK(bus.Read(0xFFFC) == 0x02);
     CHECK(bus.Read(0xFFFD) == 0x01);
 
     CHECK((bus.Read(IF) & 0x01) == 0);
-    CHECK(cpu.ime == false);
+    CHECK(CPUAccess::ime(cpu) == false);
 }
 
 void testInterruptPriority() {
@@ -97,7 +98,7 @@ void testInterruptPriority() {
 
     CHECK(cpu.Step() == 20);
 
-    CHECK(cpu.PC == 0x0040);
+    CHECK(CPUAccess::PC(cpu) == 0x0040);
     CHECK((bus.Read(IF) & 0x01) == 0);
     CHECK((bus.Read(IF) & 0x04) != 0);
     CHECK((bus.Read(IF) & 0x10) != 0);
@@ -115,10 +116,10 @@ void testInterruptWaitsWhenIMEDisabled() {
     bus.Write(IE, 0x01);
     bus.Write(IF, 0x01);
 
-    CHECK(cpu.ime == false);
+    CHECK(CPUAccess::ime(cpu) == false);
 
     CHECK(cpu.Step() == 4);
-    CHECK(cpu.PC == 0x0101);
+    CHECK(CPUAccess::PC(cpu) == 0x0101);
     CHECK((bus.Read(IF) & 0x01) != 0);
 }
 
@@ -132,20 +133,20 @@ void testHaltWakeWithoutIME() {
     });
 
     CHECK(cpu.Step() == 4);
-    CHECK(cpu.halted);
-    CHECK(cpu.PC == 0x0101);
+    CHECK(CPUAccess::halted(cpu));
+    CHECK(CPUAccess::PC(cpu) == 0x0101);
 
     CHECK(cpu.Step() == 4);
-    CHECK(cpu.halted);
-    CHECK(cpu.PC == 0x0101);
+    CHECK(CPUAccess::halted(cpu));
+    CHECK(CPUAccess::PC(cpu) == 0x0101);
 
     bus.Write(IE, 0x01);
     bus.Write(IF, 0x01);
 
     CHECK(cpu.Step() == 4);
 
-    CHECK(!cpu.halted);
-    CHECK(cpu.PC == 0x0102);
+    CHECK(!CPUAccess::halted(cpu));
+    CHECK(CPUAccess::PC(cpu) == 0x0102);
     CHECK((bus.Read(IF) & 0x01) != 0);
 }
 
@@ -162,16 +163,16 @@ void testHaltBugRepeatsSingleByteOpcode() {
     bus.Write(IF, 0x01);
 
     CHECK(cpu.Step() == 4);
-    CHECK(!cpu.halted);
-    CHECK(cpu.PC == 0x0101);
+    CHECK(!CPUAccess::halted(cpu));
+    CHECK(CPUAccess::PC(cpu) == 0x0101);
 
     CHECK(cpu.Step() == 4);
-    CHECK(cpu.B == 1);
-    CHECK(cpu.PC == 0x0101);
+    CHECK(CPUAccess::B(cpu) == 1);
+    CHECK(CPUAccess::PC(cpu) == 0x0101);
 
     CHECK(cpu.Step() == 4);
-    CHECK(cpu.B == 2);
-    CHECK(cpu.PC == 0x0102);
+    CHECK(CPUAccess::B(cpu) == 2);
+    CHECK(CPUAccess::PC(cpu) == 0x0102);
 }
 
 void testHaltBugRepeatsFirstByteOfOperand() {
@@ -188,8 +189,8 @@ void testHaltBugRepeatsFirstByteOfOperand() {
 
     CHECK(cpu.Step() == 4);
     CHECK(cpu.Step() == 8);
-    CHECK(cpu.A == 0x3E);
-    CHECK(cpu.PC == 0x0102);
+    CHECK(CPUAccess::A(cpu) == 0x3E);
+    CHECK(CPUAccess::PC(cpu) == 0x0102);
 }
 
 void testDICancelsEI() {
@@ -206,14 +207,14 @@ void testDICancelsEI() {
     bus.Write(IF, 0x01);
 
     CHECK(cpu.Step() == 4);
-    CHECK(cpu.ime == false);
+    CHECK(CPUAccess::ime(cpu) == false);
 
     CHECK(cpu.Step() == 4);
-    CHECK(cpu.ime == false);
+    CHECK(CPUAccess::ime(cpu) == false);
 
     CHECK(cpu.Step() == 4);
-    CHECK(cpu.PC == 0x0103);
-    CHECK(cpu.ime == false);
+    CHECK(CPUAccess::PC(cpu) == 0x0103);
+    CHECK(CPUAccess::ime(cpu) == false);
 }
 
 void testRETI() {
@@ -237,14 +238,14 @@ void testRETI() {
 
     CHECK(cpu.Step() == 20);
 
-    CHECK(cpu.PC == 0x0040);
-    CHECK(cpu.ime == false);
+    CHECK(CPUAccess::PC(cpu) == 0x0040);
+    CHECK(CPUAccess::ime(cpu) == false);
 
     CHECK(cpu.Step() == 16);
 
-    CHECK(cpu.PC == 0x0102);
-    CHECK(cpu.SP == 0xFFFE);
-    CHECK(cpu.ime == true);
+    CHECK(CPUAccess::PC(cpu) == 0x0102);
+    CHECK(CPUAccess::SP(cpu) == 0xFFFE);
+    CHECK(CPUAccess::ime(cpu) == true);
 }
 
 void testInterruptVectors() {
@@ -282,7 +283,7 @@ void testInterruptVectors() {
         cpu.Step();
 
         CHECK(cpu.Step() == 20);
-        CHECK(cpu.PC == test.vector);
+        CHECK(CPUAccess::PC(cpu) == test.vector);
         CHECK((bus.Read(IF) & mask) == 0);
     }
 }

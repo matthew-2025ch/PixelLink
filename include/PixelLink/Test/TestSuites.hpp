@@ -8,6 +8,10 @@ namespace GameBoy{
         void run();
     }
 
+    namespace APUAccuracyTest {
+        void run();
+    }
+
     namespace BusTest {
         void run();
     }
@@ -21,6 +25,10 @@ namespace GameBoy{
     }
 
     namespace CoreTimingTest {
+        void run();
+    }
+
+    namespace HardwareAccuracy {
         void run();
     }
 
@@ -85,6 +93,26 @@ namespace Frontend {
 
 } // namespace PixelLink::Test
 
-namespace PixelLink::Tests::Gameboy::HardwareAccuracy {
+namespace PixelLink::Tests::Desktop {
+
+namespace AudioTest {
     void run();
 }
+
+namespace ROMLibraryTest {
+    void run();
+}
+
+namespace ApplicationTest {
+    void run();
+}
+
+namespace LocalGameTest {
+    void run();
+}
+
+namespace LibraryPreviewTest {
+    void run();
+}
+
+} // namespace PixelLink::Tests::Desktop

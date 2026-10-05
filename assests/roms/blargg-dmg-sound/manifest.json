@@ -1,0 +1,66 @@
+{
+  "repository": "https://github.com/retrio/gb-test-roms",
+  "commit": "c240dd7d700e5c0b00a7bbba52b53e4ee67b5f15",
+  "roms": [
+    {
+      "file": "01-registers.gb",
+      "source": "https://raw.githubusercontent.com/retrio/gb-test-roms/c240dd7d700e5c0b00a7bbba52b53e4ee67b5f15/dmg_sound/rom_singles/01-registers.gb",
+      "sha256": "c6b9fa4b9d9d26919b33ebe78a6ef19ad2df854186cf741ca2746179cc9fc3f1"
+    },
+    {
+      "file": "02-len ctr.gb",
+      "source": "https://raw.githubusercontent.com/retrio/gb-test-roms/c240dd7d700e5c0b00a7bbba52b53e4ee67b5f15/dmg_sound/rom_singles/02-len%20ctr.gb",
+      "sha256": "745544125a5065729cab22494a79f65c3836e4426f89e4cc43d330afe711b413"
+    },
+    {
+      "file": "03-trigger.gb",
+      "source": "https://raw.githubusercontent.com/retrio/gb-test-roms/c240dd7d700e5c0b00a7bbba52b53e4ee67b5f15/dmg_sound/rom_singles/03-trigger.gb",
+      "sha256": "bb11e7266a7143bafb8aa2a73ca70957c6011f36cd4e0b6aaf0678378294e75c"
+    },
+    {
+      "file": "04-sweep.gb",
+      "source": "https://raw.githubusercontent.com/retrio/gb-test-roms/c240dd7d700e5c0b00a7bbba52b53e4ee67b5f15/dmg_sound/rom_singles/04-sweep.gb",
+      "sha256": "58bc14541d91bb020c7761b423825b3432cfde7ee2fa4d1116126e4cb9573c7e"
+    },
+    {
+      "file": "05-sweep details.gb",
+      "source": "https://raw.githubusercontent.com/retrio/gb-test-roms/c240dd7d700e5c0b00a7bbba52b53e4ee67b5f15/dmg_sound/rom_singles/05-sweep%20details.gb",
+      "sha256": "f582ca3a0b2544b9510797d7d4dd56a17f53e000511b0ae88a6353200dcd9167"
+    },
+    {
+      "file": "06-overflow on trigger.gb",
+      "source": "https://raw.githubusercontent.com/retrio/gb-test-roms/c240dd7d700e5c0b00a7bbba52b53e4ee67b5f15/dmg_sound/rom_singles/06-overflow%20on%20trigger.gb",
+      "sha256": "1a511e95e84ed6fe6077cabf451a98b4e01fdef59cadae3efbc178113eb064b1"
+    },
+    {
+      "file": "07-len sweep period sync.gb",
+      "source": "https://raw.githubusercontent.com/retrio/gb-test-roms/c240dd7d700e5c0b00a7bbba52b53e4ee67b5f15/dmg_sound/rom_singles/07-len%20sweep%20period%20sync.gb",
+      "sha256": "56bf5b0c18b996929c9b052ba5a02b450cb619bb6c24cc1d34ea20951c977bf7"
+    },
+    {
+      "file": "08-len ctr during power.gb",
+      "source": "https://raw.githubusercontent.com/retrio/gb-test-roms/c240dd7d700e5c0b00a7bbba52b53e4ee67b5f15/dmg_sound/rom_singles/08-len%20ctr%20during%20power.gb",
+      "sha256": "31cb41f7be106a708ec0bc94f2a9d0b506d247cd591e9d0a2a6a960dc3bf6595"
+    },
+    {
+      "file": "09-wave read while on.gb",
+      "source": "https://raw.githubusercontent.com/retrio/gb-test-roms/c240dd7d700e5c0b00a7bbba52b53e4ee67b5f15/dmg_sound/rom_singles/09-wave%20read%20while%20on.gb",
+      "sha256": "378b86f6a25daa16855260d7ef0c24e48146ba05df434a0b5413983a1447e875"
+    },
+    {
+      "file": "10-wave trigger while on.gb",
+      "source": "https://raw.githubusercontent.com/retrio/gb-test-roms/c240dd7d700e5c0b00a7bbba52b53e4ee67b5f15/dmg_sound/rom_singles/10-wave%20trigger%20while%20on.gb",
+      "sha256": "fa63c8ed7473411e54285d318e33bf23ff6d637ed2caa7555ddeaf80578e3279"
+    },
+    {
+      "file": "11-regs after power.gb",
+      "source": "https://raw.githubusercontent.com/retrio/gb-test-roms/c240dd7d700e5c0b00a7bbba52b53e4ee67b5f15/dmg_sound/rom_singles/11-regs%20after%20power.gb",
+      "sha256": "d27dab46e8b881028723f1975328572d38e25d295289b974cd698916a0be5dab"
+    },
+    {
+      "file": "12-wave write while on.gb",
+      "source": "https://raw.githubusercontent.com/retrio/gb-test-roms/c240dd7d700e5c0b00a7bbba52b53e4ee67b5f15/dmg_sound/rom_singles/12-wave%20write%20while%20on.gb",
+      "sha256": "2efbecd2c6d40928d44f45da4f634626bcd2790165b3949aedfe377c73913774"
+    }
+  ]
+}

@@ -3,6 +3,7 @@
 #include <PixelLink/GameBoy/Bus.hpp>
 #include <PixelLink/GameBoy/GameBoy.hpp>
 #include <PixelLink/GameBoy/Timer.hpp>
+#include <PixelLink/Test/GameBoy/CPUAccess.hpp>
 #include <PixelLink/Test/TestFramework.hpp>
 #include <PixelLink/Test/TestUtils.hpp>
 
@@ -88,7 +89,7 @@ void testHaltStillAdvancesTimer() {
     });
 
     CHECK(gameBoy.Step() == 4);
-    CHECK(cpu.halted);
+    CHECK(CPUAccess::halted(cpu));
 
     // HALT stops opcode execution, but hardware time still advances.
     CHECK(gameBoy.Step() == 4);
@@ -163,12 +164,12 @@ void testGameBoyServicesTimerInterrupt() {
 
     CHECK(bus.Read(TIMA) == 0x42);
     CHECK((bus.Read(IF) & TIMER_INTERRUPT) != 0);
-    CHECK(cpu.PC == 0x0105);
+    CHECK(CPUAccess::PC(cpu) == 0x0105);
 
     CHECK(gameBoy.Step() == 20); // Service Timer interrupt
 
-    CHECK(cpu.PC == 0x0050);
-    CHECK(cpu.SP == 0xFFFC);
+    CHECK(CPUAccess::PC(cpu) == 0x0050);
+    CHECK(CPUAccess::SP(cpu) == 0xFFFC);
     CHECK(bus.Read(0xFFFC) == 0x05);
     CHECK(bus.Read(0xFFFD) == 0x01);
     CHECK((bus.Read(IF) & TIMER_INTERRUPT) == 0);

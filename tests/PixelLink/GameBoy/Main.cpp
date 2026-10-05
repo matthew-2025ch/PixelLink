@@ -5,11 +5,13 @@ using namespace PixelLink::Test::GameBoy;
 
 int main() {
     return PixelLink::Test::RunTestProgram("GameBoyTests", "Game Boy Core Tests", [] {
+        APUAccuracyTest::run();
         APUTest::run();
         BusTest::run();
         CartridgeTest::run();
         CPUTest::run();
         CoreTimingTest::run();
+        HardwareAccuracy::run();
         InterruptTest::run();
         JoypadTest::run();
         MapperFactoryTest::run();
@@ -22,6 +24,5 @@ int main() {
         SerialTest::run();
         TimerIntegrationTest::run();
         TimerTest::run();
-        PixelLink::Tests::Gameboy::HardwareAccuracy::run();
     });
 }

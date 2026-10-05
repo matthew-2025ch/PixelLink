@@ -63,10 +63,10 @@ void PruneRunLogs(
     const std::filesystem::path& directory,
     const std::filesystem::path& currentLog
 ) {
-    // Only the two test programs' timestamped records belong to this policy.
+    // Only the test programs' timestamped records belong to this policy.
     // Ignore unrelated files, directories and symlinks in the log directory.
     static const std::regex runLogName(
-        R"(^\[\d{4}-\d{2}-\d{2} \d{2}-\d{2}-\d{2}-\d{3}\] (GameBoyTests|FrontendTests)\.log$)");
+        R"(^\[\d{4}-\d{2}-\d{2} \d{2}-\d{2}-\d{2}-\d{3}\] (GameBoyTests|FrontendTests|DesktopTests)\.log$)");
     std::vector<std::filesystem::path> logs;
     for (const auto& entry : std::filesystem::directory_iterator(directory)) {
         if (!entry.is_symlink() && entry.is_regular_file() &&

@@ -1,6 +1,7 @@
 #include <stdexcept>
 
 #include <PixelLink/GameBoy/Timer.hpp>
+#include <PixelLink/GameBoy/APU.hpp>
 
 namespace PixelLink::GameBoy {
 
@@ -36,7 +37,11 @@ void Timer::TickOneCycle() {
 
     const bool oldSignal = TimerSignal();
 
+    const bool oldAPUSignal = (systemCounter_ & 0x1000) != 0;
     ++systemCounter_;
+    if (apu_ && oldAPUSignal && (systemCounter_ & 0x1000) == 0) {
+        apu_->ClockDivider();
+    }
 
     const bool newSignal = TimerSignal();
 
@@ -104,8 +109,12 @@ void Timer::Write(uint16_t address, uint8_t value) {
     switch (address) {
     case DIV: {
         const bool oldSignal = TimerSignal();
+        const bool oldAPUSignal = (systemCounter_ & 0x1000) != 0;
 
         systemCounter_ = 0;
+        if (apu_ && oldAPUSignal) {
+            apu_->ClockDivider();
+        }
 
         const bool newSignal = TimerSignal();
 
@@ -164,6 +173,11 @@ bool Timer::ConsumeInterruptRequest() {
 
     interruptRequested_ = false;
     return true;
+}
+
+void Timer::AttachAPU(APU& apu) noexcept {
+    apu_ = &apu;
+    apu.SetExternalDividerClock(true);
 }
 
 } // namespace PixelLink::GameBoy

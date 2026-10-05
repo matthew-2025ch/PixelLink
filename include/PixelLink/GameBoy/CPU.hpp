@@ -5,6 +5,8 @@
 #include <format>
 #include <functional>
 
+namespace PixelLink::Test::GameBoy { struct CPUAccess; }
+
 namespace PixelLink::GameBoy {
 
 class Bus;
@@ -23,9 +25,8 @@ public:
     auto SetCycleCallback(std::function<void(std::uint32_t)> callback) -> void;
     [[nodiscard]] auto GetRegisterSnapshot() const noexcept -> RegisterSnapshot;
 
-#ifndef _DEBUG
 private:
-#endif
+    friend struct PixelLink::Test::GameBoy::CPUAccess;
     uint8_t A = 0;
     uint8_t F = 0;
     uint8_t B = 0;
@@ -41,9 +42,6 @@ private:
     bool haltBugPending = false;
     uint8_t imeEnableDelay = 0;
 
-#ifdef _DEBUG
-private:
-#endif
     enum Flag : uint8_t {
         Z  = 1u << 7,
         N  = 1u << 6,
