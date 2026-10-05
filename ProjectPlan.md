@@ -91,7 +91,7 @@
    - [x] Emulator main loop integration
    - [x] Run ROM ONLY games with visible graphics
    - [x] Keyboard input forwarding
-   - [x] FrontendTests
+   - [x] FrontendTest
    - [x] Emulator / ROM / SDL integration test
    - [x] Standalone PixelLink SDL application (Chinese UI; no test executable required)
    - [x] Recursive assests/roms library; external ROM imports and opens copy into the library
@@ -99,7 +99,7 @@
    - [x] Fresh core per game, enter/exit, pause, mute and focus-loss handling
    - [x] Manual/periodic/exit battery saves, automatic loading and visible failure recovery
    - [x] Atomic save replacement and companion save import without overwrites
-   - [x] Bounded DesktopTests for the application, local-game PCM and screenshots
+   - [x] Bounded DesktopTest for the application, local-game PCM and screenshots
 
 10. Joypad
    - [x] FF00
@@ -120,24 +120,24 @@
    - [x] Test ROM runner and initial Mooneye acceptance tests
    - [x] HALT bug
    - [x] HALT, timer read, and OAM DMA boundary timing regressions
-   - [x] Broader hardware accuracy suite (40 Mooneye ROMs integrated into GameBoyTests: CPU, PPU, timer, DMA, serial)
+   - [x] Broader hardware accuracy suite (40 Mooneye ROMs integrated into GameBoyTest: CPU, PPU, timer, DMA, serial)
    - [x] HardwareAccuracy::run() registered in TestSuites.hpp; argument-free main runs all selected ROMs
    - [x] Shared spdlog test logging (console, timestamped run files, ten-record retention, case duration and failure diagnostics)
    - [x] TIMA/TMA reload-cycle write behavior and FF46 reads during DMA
    - [x] CPU memory access timing within each instruction and DMA start / restart / completion / source rules
    - [x] PPU mode / sprite / SCX timing, LCD on/off and STAT / LYC / VBlank boundaries covered by the selected suite
    - [x] DMG serial transfer engine, interrupt and DMG ABC post-boot clock phase
-   - Latest hardware run: 40/40 Mooneye ROMs plus 12/12 Blargg DMG sound ROMs pass; GameBoyTests has 194 passing cases. Debug and Release automatic CTest suites pass. Native Windows video and WASAPI device checks pass through DesktopTests.
+   - Latest hardware run: 40/40 Mooneye ROMs plus 12/12 Blargg DMG sound ROMs pass; GameBoyTest has 194 passing cases. Debug and Release automatic CTest suites pass. Native Windows video and WASAPI device checks pass through DesktopTest.
      See [HardwareAccuracy.md](HardwareAccuracy.md) for results and the next target.
 
 13. APU
    - [x] Four audio channels: CH1 sweep, CH2 pulse, CH3 wave, CH4 noise
    - [x] Stereo mixer and SDL Audio playback
    - [x] Automatic SDL3.dll deployment for Windows frontend executables
-   - [x] Frontend::AudioTest::run() integrated into FrontendTests (SDL dummy driver; restored before the interactive game)
+   - [x] Frontend::AudioTest::run() integrated into FrontendTest (SDL dummy driver; restored before the interactive game)
    - [x] Verify local-game stereo PCM and real SDL playback device (Windows WASAPI)
    - [x] Advanced DMG APU accuracy: real DIV falling edges and DIV writes, power/length behavior, trigger quirks, sweep, wave RAM fetch access and retrigger corruption
-   - [x] All 12 unmodified Blargg dmg_sound ROMs integrated into GameBoyTests; pinned version and SHA-256 manifest
+   - [x] All 12 unmodified Blargg dmg_sound ROMs integrated into GameBoyTest; pinned version and SHA-256 manifest
    - [x] DAC conversion and sample-rate-dependent high-pass filtering
    - Manual listening remains a user/device acceptance check; automated device/PCM checks cannot judge subjective sound quality. Revision-specific analog and zombie-envelope variations are outside the current DMG test set.
 

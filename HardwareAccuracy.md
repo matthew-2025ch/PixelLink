@@ -2,21 +2,21 @@
 
 检测日期：2026-10-03（Asia/Shanghai）；Windows x64 / MSVC / Debug。
 
-官方 Mooneye `mts-20260714-0944-31510e1` 的 40 个未经修改的 ROM，已从 **26 通过 / 14 失败** 提升至 **40 通过 / 0 失败**。2026-10-03 修复验收时，`GameBoyTests`、40 个独立 ROM 项与 `AudioFrontendTests` 共 **42/42** 通过，无跳过或预期失败项。
+官方 Mooneye `mts-20260714-0944-31510e1` 的 40 个未经修改的 ROM，已从 **26 通过 / 14 失败** 提升至 **40 通过 / 0 失败**。2026-10-03 修复验收时，`GameBoyTest`、40 个独立 ROM 项与 `AudioFrontendTest` 共 **42/42** 通过，无跳过或预期失败项。
 
 ## 测试入口调整（2026-10-04）
 
-全部 40 个 ROM 已合并至 `GameBoyTests`。入口为 `PixelLink::Tests::Gameboy::HardwareAccuracy::run()`，声明位于 `TestSuites.hpp`，由现有无参数 `main()` 调用。独立的 `HardwareAccuracyTests` 程序与重复运行原始八个 ROM 的 `ROMTest` 已移除。
+全部 40 个 ROM 已合并至 `GameBoyTest`。入口为 `PixelLink::Test::GameBoy::HardwareAccuracy::run()`，声明位于 `TestSuites.hpp`，由现有无参数 `main()` 调用。独立的 `HardwareAccuracyTest` 程序与重复运行原始八个 ROM 的 `ROMTest` 已移除。
 
-ROM 清单统一放在 `tests/PixelLink/GameBoy/HardwareAccuracy.cpp`，程序自动依次测试全部条目，使用现有 `Test::run` 格式逐项报告结果。某项失败后继续运行其它 ROM，最终以非零状态退出；缺失 ROM 作为失败报告。
+ROM 清单统一放在 `Test/PixelLink/GameBoy/HardwareAccuracyTest.cpp`，程序自动依次测试全部条目，使用现有 `Test::run` 格式逐项报告结果。某项失败后继续运行其它 ROM，最终以非零状态退出；缺失 ROM 作为失败报告。
 
-重新完整构建后的 `GameBoyTests` 与 `AudioFrontendTests` **2/2 CTest 项通过**；统一入口中的 **40/40 ROM 各执行一次并通过**。另行验证了缺失首个 ROM 的情况：该项报告失败，剩余 39 项全部执行且通过，程序返回 1。验证后原始 ROM 已恢复并重新核对哈希。
+重新完整构建后的 `GameBoyTest` 与 `AudioFrontendTest` **2/2 CTest 项通过**；统一入口中的 **40/40 ROM 各执行一次并通过**。另行验证了缺失首个 ROM 的情况：该项报告失败，剩余 39 项全部执行且通过，程序返回 1。验证后原始 ROM 已恢复并重新核对哈希。
 
 2026-10-04 验收记录：[integrated-tests.xml](out/build/hardware/integrated-tests.xml) 与 [integrated-tests.log](out/integrated-tests.log)；逐项输出见 [LastTest.log](out/build/hardware/Testing/Temporary/LastTest.log)。
 
 ## 前端音频入口调整（2026-10-05）
 
-音频集成检查已合并至 `FrontendTests`，入口为 `PixelLink::Test::Frontend::AudioTest::run()`，在 `TestSuites.hpp` 中声明。前端主入口先运行自动音频检查，再运行需要手动关闭的游戏窗口测试；独立 `AudioFrontendTests` 构建目标已移除。
+音频集成检查已合并至 `FrontendTest`，入口为 `PixelLink::Test::Frontend::AudioTest::run()`，在 `TestSuites.hpp` 中声明。前端主入口先运行自动音频检查，再运行需要手动关闭的游戏窗口测试；独立 `AudioFrontendTest` 构建目标已移除。
 
 自动检查临时使用 dummy 音频驱动。通过作用域清理关闭其音频子系统，并恢复之前的驱动选择；正常返回或断言异常都会执行清理，SDL 初始化失败时也恢复驱动。后续游戏窗口按原来的音频配置初始化。本次调整完成重新构建，尚未复跑交互窗口或实际听音验收。
 
@@ -38,13 +38,13 @@ ROM 清单统一放在 `tests/PixelLink/GameBoy/HardwareAccuracy.cpp`，程序�
 - **PPU 读写端口**：VRAM/OAM 分开判定读写权限，覆盖 Mode 2/3 边界及 OAM 扫描结束前短暂允许写入的窗口；LY 的 CPU 写入被忽略。
 - **Timer**：溢出等待与重载窗口分开处理，修正重载期间 TIMA/TMA 的写入行为。此修复已包含在 26/40 基线中，本轮继续保持全部 14 项 Timer 验收通过。
 - **Serial**：新增 DMG 串口传输设备，支持内部时钟、断线输入、外部逐位输入输出、完成中断、取消和重启。核心使用 DMG ABC 启动后的串口时钟相位，DIV 写入不重置串口时钟。
-- **Windows 前端部署**：CMake 在链接 `FrontendTests` / `AudioFrontendTests` 后，将所选共享 SDL 目标的 DLL 自动复制到对应程序目录。部署副本与构建出的 DLL 哈希一致，缺失 DLL 导致的启动错误已解决。
+- **Windows 前端部署**：CMake 在链接 `FrontendTest` / `AudioFrontendTest` 后，将所选共享 SDL 目标的 DLL 自动复制到对应程序目录。部署副本与构建出的 DLL 哈希一致，缺失 DLL 导致的启动错误已解决。
 
 ## 回归覆盖
 
 新增或更新了 CPU 访存/栈/中断周期、DMA 启动/重启/结束、LCD 开启与模式边界、VRAM/OAM 读写差异、LY 寄存器、Timer 逐周期重载和串口逐位传输测试。原有指令、渲染、映射器、RTC、存档、输入和 APU 核心测试继续通过。
 
-2026-10-03/04 的独立音频检查使用 SDL dummy 音频驱动，验证 APU 样本经前端提交给 SDL、初始化/关闭及重新初始化，并通过验收。该检查现通过 `Frontend::AudioTest::run()` 合并到 `FrontendTests`。自动检查尚未验证扬声器实际发声或声音是否准确。
+2026-10-03/04 的独立音频检查使用 SDL dummy 音频驱动，验证 APU 样本经前端提交给 SDL、初始化/关闭及重新初始化，并通过验收。该检查现通过 `Frontend::AudioTest::run()` 合并到 `FrontendTest`。自动检查尚未验证扬声器实际发声或声音是否准确。
 
 ## 全部 ROM 结果
 
@@ -138,8 +138,8 @@ DAC 数字值转换和高通滤波现在随输出采样率计算，并在 DAC �
 不同游戏使用新的模拟器实例；保存使用完整临时文件替换。保存失败时保留当前游戏并阻止退出。
 操作和构建说明见 [README.md](README.md)。
 
-Release 验收：`GameBoyTests` 中 **194/194** 项通过，包括原有 **40/40 Mooneye** 和
-新增 **12/12 Blargg APU ROM**；`DesktopTests` 的自动音频、导入、窗口、存档和本地游戏检查通过。
+Release 验收：`GameBoyTest` 中 **194/194** 项通过，包括原有 **40/40 Mooneye** 和
+新增 **12/12 Blargg APU ROM**；`DesktopTest` 的自动音频、导入、窗口、存档和本地游戏检查通过。
 CTest **2/2**，结果保存在 `out/build/release/final-tests.xml` 和 `out/release-validation.log`。
 Debug 同样 **194/194** 核心项、**40/40 Mooneye**、**12/12 APU ROM** 与自动窗口检查通过，
 CTest **2/2**。原生 Windows 视频后端和 WASAPI 真实音频设备的隐藏窗口检查全部通过。
@@ -162,13 +162,13 @@ CPU 测试访问也改为显式测试支持，Release 不再依赖 `_DEBUG` 暴�
 本次构建目录为 `out/build/release` 和 `out/build/verified`；构建产物不进入版本控制。
 
 当前独立应用：[PixelLink.exe](out/build/release/PixelLink.exe)，配套 SDL3.dll 在同目录。
-`FrontendTests` 保留为交互测试入口；自动窗口流程使用 `DesktopTests`。
+`FrontendTest` 保留为交互测试入口；自动窗口流程使用 `DesktopTest`。
 
 在已配置的 C++ 开发环境中运行：
 
 ```powershell
-cmake --build out/build/release --target PixelLink GameBoyTests DesktopTests FrontendTests
-ctest --test-dir out/build/release -R '^(GameBoyTests|DesktopTests)$' --output-on-failure
+cmake --build out/build/release --target PixelLink GameBoyTest DesktopTest FrontendTest
+ctest --test-dir out/build/release -R '^(GameBoyTest|DesktopTest)$' --output-on-failure
 out/build/release/PixelLink.exe
 ```
 

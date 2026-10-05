@@ -4,7 +4,7 @@
 #include <filesystem>
 #include <string>
 
-namespace PixelLink::Tests::Desktop::TestUtils {
+namespace PixelLink::Test::Desktop::TestUtils {
 
 struct Options {
     bool realAudio = false;
@@ -28,4 +28,4 @@ struct Fixture {
 void MakeROM(const std::filesystem::path& path, unsigned char type = 0x03, unsigned char value = 0x5A);
 void Key(PixelLink::Frontend::Application& app, SDL_Scancode key, SDL_EventType type = SDL_EVENT_KEY_DOWN);
 
-} // namespace PixelLink::Tests::Desktop::TestUtils
+} // namespace PixelLink::Test::Desktop::TestUtils

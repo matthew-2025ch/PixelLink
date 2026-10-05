@@ -1,10 +1,10 @@
-#include <PixelLink/Test/Logger.hpp>
+#include <PixelLink/Test/TestRunner.hpp>
 #include <PixelLink/Test/TestSuites.hpp>
 
 using namespace PixelLink::Test::GameBoy;
 
 int main() {
-    return PixelLink::Test::RunTestProgram("GameBoyTests", "Game Boy Core Tests", [] {
+    return PixelLink::Test::RunTestProgram("GameBoyTest", "Game Boy Core Tests", [] {
         APUAccuracyTest::run();
         APUTest::run();
         BusTest::run();

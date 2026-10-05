@@ -10,12 +10,12 @@ and SHA-256 hashes for every checked-in ROM. The suite needs no download at runt
 
 ## Test organization
 
-All 40 ROMs run inside `GameBoyTests`, through
-`PixelLink::Tests::Gameboy::HardwareAccuracy::run()`. The entry is declared
+All 40 ROMs run inside `GameBoyTest`, through
+`PixelLink::Test::GameBoy::HardwareAccuracy::run()`. The entry is declared
 in `include/PixelLink/Test/TestSuites.hpp` and called from the existing
 argument-free `main()`. There is no separate hardware accuracy executable.
 
-`tests/PixelLink/GameBoy/HardwareAccuracy.cpp` contains the complete ordered
+`Test/PixelLink/GameBoy/HardwareAccuracyTest.cpp` contains the complete ordered
 ROM list. The program selects every listed ROM itself; no command-line
 arguments or working-directory-dependent paths are required. A missing ROM
 fails its case. Add new acceptance ROMs to this list and the hash manifest.
@@ -37,17 +37,17 @@ ROMs are part of this same 40-ROM list and are each run once.
 From the project root in a configured C++ developer environment:
 
 ```powershell
-cmake --build out/build/hardware --clean-first --target GameBoyTests
-out/build/hardware/GameBoyTests.exe
+cmake --build out/build/hardware --clean-first --target GameBoyTest
+out/build/hardware/GameBoyTest.exe
 ```
 
 Alternatively, run the same combined suite through CTest:
 
 ```powershell
-ctest --test-dir out/build/hardware -R '^GameBoyTests$' --output-on-failure
+ctest --test-dir out/build/hardware -R '^GameBoyTest$' --output-on-failure
 ```
 
-The `accuracy` label selects `GameBoyTests`; it includes the core tests and
+The `accuracy` label selects `GameBoyTest`; it includes the core tests and
 all ROMs. ROMs are reported separately in program output, rather than as
 individual CTest entries. For a multi-configuration generator, add
 `--config Debug` when building and `-C Debug` when invoking CTest.
@@ -72,7 +72,7 @@ rendering remains scanline based. A complete pixel FIFO/fetcher and arbitrary
 mid-scanline register changes are not validated by this subset.
 
 Windows frontend targets deploy SDL3.dll beside their executables after
-linking when SDL is shared. `FrontendTests` first runs `Frontend::AudioTest::run()`
+linking when SDL is shared. `FrontendTest` first runs `Frontend::AudioTest::run()`
 with SDL's dummy audio driver, restores the previous driver selection, then
 opens the interactive game test. Audible playback on a physical device
 remains a separate check; close the game window to finish the combined suite.

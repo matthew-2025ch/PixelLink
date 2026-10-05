@@ -1,4 +1,4 @@
-#include "TestUtils.hpp"
+#include <PixelLink/TestUtils/Desktop.hpp>
 
 #include <algorithm>
 #include <fstream>
@@ -8,7 +8,7 @@
 namespace fs = std::filesystem;
 using namespace PixelLink::Frontend;
 
-namespace PixelLink::Tests::Desktop::TestUtils {
+namespace PixelLink::Test::Desktop::TestUtils {
 namespace {
 Options options;
 }
@@ -77,4 +77,4 @@ void Key(Application& app, SDL_Scancode key, SDL_EventType type) {
     app.HandleEvent(event);
 }
 
-} // namespace PixelLink::Tests::Desktop::TestUtils
+} // namespace PixelLink::Test::Desktop::TestUtils

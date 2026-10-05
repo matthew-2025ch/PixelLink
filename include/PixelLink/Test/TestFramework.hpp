@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <string_view>
 
-#include <PixelLink/Test/Logger.hpp>
+#include <PixelLink/Utils/Logger.hpp>
 
 namespace PixelLink::Test {
 
@@ -37,16 +37,16 @@ void run(
     try {
         test();
 
-        GetLogger().info("[PASS] {} ({:.2f} ms)", name, elapsedMilliseconds());
+        Utils::GetLogger().info("[PASS] {} ({:.2f} ms)", name, elapsedMilliseconds());
     }
     catch (const std::exception& e) {
-        GetLogger().error("[FAIL] {} ({:.2f} ms)\n       {}",
+        Utils::GetLogger().error("[FAIL] {} ({:.2f} ms)\n       {}",
             name, elapsedMilliseconds(), e.what());
 
         throw;
     }
     catch (...) {
-        GetLogger().error("[FAIL] {} ({:.2f} ms)\n       Unknown exception",
+        Utils::GetLogger().error("[FAIL] {} ({:.2f} ms)\n       Unknown exception",
             name, elapsedMilliseconds());
         throw;
     }

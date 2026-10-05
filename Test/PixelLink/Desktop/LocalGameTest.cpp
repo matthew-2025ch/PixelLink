@@ -1,6 +1,6 @@
 #include <PixelLink/Test/TestFramework.hpp>
 #include <PixelLink/Test/TestSuites.hpp>
-#include "TestUtils.hpp"
+#include <PixelLink/TestUtils/Desktop.hpp>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -8,9 +8,9 @@
 
 namespace fs = std::filesystem;
 using namespace PixelLink::Frontend;
-using namespace PixelLink::Tests::Desktop::TestUtils;
+using namespace PixelLink::Test::Desktop::TestUtils;
 
-namespace PixelLink::Tests::Desktop::LocalGameTest {
+namespace PixelLink::Test::Desktop::LocalGameTest {
 namespace {
 
 void testLocalGameAudioAndRendering() {
@@ -65,7 +65,7 @@ void testLocalGameAudioAndRendering() {
                 else if (now - nextFrame > frameDuration * 4) nextFrame = now;
             }
         }
-        PixelLink::Test::GetLogger().info("Local game audio: {}, driver={}, left={}, right={}, peak={}",
+        PixelLink::Utils::GetLogger().info("Local game audio: {}, driver={}, left={}, right={}, peak={}",
             name, SDL_GetCurrentAudioDriver(), left, right, peak);
         app.AdvanceFrame(); // Synchronize the real game framebuffer to SDL.
         app.Draw();
@@ -85,4 +85,4 @@ void run() {
     PixelLink::Test::run("SDL application / local game PCM and rendering", testLocalGameAudioAndRendering);
 }
 
-} // namespace PixelLink::Tests::Desktop::LocalGameTest
+} // namespace PixelLink::Test::Desktop::LocalGameTest

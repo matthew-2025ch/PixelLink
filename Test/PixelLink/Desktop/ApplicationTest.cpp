@@ -1,14 +1,14 @@
 #include <PixelLink/Test/TestFramework.hpp>
 #include <PixelLink/Test/TestSuites.hpp>
-#include "TestUtils.hpp"
+#include <PixelLink/TestUtils/Desktop.hpp>
 #include <fstream>
 #include <vector>
 
 namespace fs = std::filesystem;
 using namespace PixelLink::Frontend;
-using namespace PixelLink::Tests::Desktop::TestUtils;
+using namespace PixelLink::Test::Desktop::TestUtils;
 
-namespace PixelLink::Tests::Desktop::ApplicationTest {
+namespace PixelLink::Test::Desktop::ApplicationTest {
 namespace {
 
 void testWindowAndGameLifecycle() {
@@ -128,4 +128,4 @@ void run() {
     PixelLink::Test::run("SDL application / input, audio, save failures and game lifecycle", testWindowAndGameLifecycle);
 }
 
-} // namespace PixelLink::Tests::Desktop::ApplicationTest
+} // namespace PixelLink::Test::Desktop::ApplicationTest

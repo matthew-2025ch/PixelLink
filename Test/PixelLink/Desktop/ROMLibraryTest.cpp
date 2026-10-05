@@ -1,14 +1,14 @@
 #include <PixelLink/Test/TestFramework.hpp>
 #include <PixelLink/Test/TestSuites.hpp>
-#include "TestUtils.hpp"
+#include <PixelLink/TestUtils/Desktop.hpp>
 #include <fstream>
 #include <stdexcept>
 
 namespace fs = std::filesystem;
 using namespace PixelLink::Frontend;
-using namespace PixelLink::Tests::Desktop::TestUtils;
+using namespace PixelLink::Test::Desktop::TestUtils;
 
-namespace PixelLink::Tests::Desktop::ROMLibraryTest {
+namespace PixelLink::Test::Desktop::ROMLibraryTest {
 namespace {
 
 void testRecursiveLibraryAndImport() {
@@ -49,4 +49,4 @@ void run() {
     PixelLink::Test::run("ROM library / recursive scan, Unicode and safe imports", testRecursiveLibraryAndImport);
 }
 
-} // namespace PixelLink::Tests::Desktop::ROMLibraryTest
+} // namespace PixelLink::Test::Desktop::ROMLibraryTest

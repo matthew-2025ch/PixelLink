@@ -59,21 +59,21 @@ out/build/release/PixelLink.exe --rom "D:/Games/GameBoy/example.gb"
 ```powershell
 git submodule update --init --recursive
 cmake -S . -B out/build/release -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build out/build/release --target PixelLink GameBoyTests DesktopTests FrontendTests --parallel
-ctest --test-dir out/build/release -R '^(GameBoyTests|DesktopTests)$' --output-on-failure
+cmake --build out/build/release --target PixelLink GameBoyTest DesktopTest FrontendTest --parallel
+ctest --test-dir out/build/release -R '^(GameBoyTest|DesktopTest)$' --output-on-failure
 ```
 
 本机中文 MSVC 的 `/showIncludes` 前缀被 CMake 自动识别成乱码，需要在配置时加：
 `"-DPIXELLINK_MSVC_INCLUDE_PREFIX=注意: 包含文件:"`。
 此选项仅覆盖 Ninja 的依赖识别前缀；其它语言或生成器保持默认。
 
-- `GameBoyTests`：核心单元测试、40 个 Mooneye ROM 和 12 个 Blargg DMG APU ROM。
-- `DesktopTests`：自动音频检查、ROM 导入、中文路径、输入、暂停、存档、失败恢复、
+- `GameBoyTest`：核心单元测试、40 个 Mooneye ROM 和 12 个 Blargg DMG APU ROM。
+- `DesktopTest`：自动音频检查、ROM 导入、中文路径、输入、暂停、存档、失败恢复、
   两款本地游戏 PCM 和窗口截图。正常运行使用 dummy 视频、音频驱动，不弹出交互窗口。
-- `DesktopTests --real-audio`：隐藏测试窗口，使用真实音频设备进行有时长上限的播放检查。
+- `DesktopTest --real-audio`：隐藏测试窗口，使用真实音频设备进行有时长上限的播放检查。
   它验证设备打开和样本提交，声音是否悦耳或完全准确仍需要实际听音确认。
-- `DesktopTests --real-devices`：隐藏窗口，使用原生视频后端和真实音频设备验证绘制、呈现和播放。
-- `FrontendTests`：保留原来的交互游戏测试，需要手动关闭窗口，标签为 `interactive`。
+- `DesktopTest --real-devices`：隐藏窗口，使用原生视频后端和真实音频设备验证绘制、呈现和播放。
+- `FrontendTest`：保留原来的交互游戏测试，需要手动关闭窗口，标签为 `interactive`。
 
-测试日志和截图在构建目录 `logs/`、`desktop-tests/`；测试生成的 ROM、存档在专用临时目录中清理，
+测试日志和截图在构建目录 `logs/`、`DesktopTest/`；测试生成的 ROM、存档在专用临时目录中清理，
 不会修改游戏库中的存档。进度和准确性范围见 `ProjectPlan.md`、`HardwareAccuracy.md`。

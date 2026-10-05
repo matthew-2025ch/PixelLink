@@ -1,4 +1,5 @@
-#include <PixelLink/Test/Logger.hpp>
+#include <PixelLink/Utils/Logger.hpp>
+#include <PixelLink/Test/TestRunner.hpp>
 
 #include <algorithm>
 #include <chrono>
@@ -7,7 +8,6 @@
 #include <filesystem>
 #include <format>
 #include <iomanip>
-#include <memory>
 #include <regex>
 #include <sstream>
 #include <stdexcept>
@@ -15,16 +15,12 @@
 #include <system_error>
 #include <vector>
 
-#include <spdlog/cfg/env.h>
-#include <spdlog/sinks/basic_file_sink.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
-
 namespace PixelLink::Test {
+using Utils::GetLogger;
 namespace {
 
 using Clock = std::chrono::system_clock;
 constexpr std::size_t MAX_RUN_LOGS = 10;
-constexpr auto LOG_PATTERN = "[%l %Y-%m-%d %H:%M:%S:%e] %v";
 
 auto MakeRunLogPath(
     const std::filesystem::path& directory,
@@ -65,8 +61,9 @@ void PruneRunLogs(
 ) {
     // Only the test programs' timestamped records belong to this policy.
     // Ignore unrelated files, directories and symlinks in the log directory.
+    // Optional 's' keeps older run records within the same retention limit.
     static const std::regex runLogName(
-        R"(^\[\d{4}-\d{2}-\d{2} \d{2}-\d{2}-\d{2}-\d{3}\] (GameBoyTests|FrontendTests|DesktopTests)\.log$)");
+        R"(^\[\d{4}-\d{2}-\d{2} \d{2}-\d{2}-\d{2}-\d{3}\] (GameBoyTest|FrontendTest|DesktopTest)s?\.log$)");
     std::vector<std::filesystem::path> logs;
     for (const auto& entry : std::filesystem::directory_iterator(directory)) {
         if (!entry.is_symlink() && entry.is_regular_file() &&
@@ -97,31 +94,16 @@ void PruneRunLogs(
 }
 
 void InitializeLogging(const std::string_view programName, const Clock::time_point startedAt) {
-    auto console = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-    console->set_pattern(std::string("%^") + LOG_PATTERN + "%$");
-
-    // Install the console first so a file setup failure can still be reported.
-    auto logger = std::make_shared<spdlog::logger>(std::string(programName), console);
-    spdlog::set_default_logger(logger);
-
+    // Path selection can fail before file logging is ready.
+    Utils::InitializeLogger(programName);
     const auto directory = std::filesystem::path(PIXELLINK_TEST_LOG_DIR);
     const auto logPath = MakeRunLogPath(directory, programName, startedAt);
-    auto file = std::make_shared<spdlog::sinks::basic_file_sink_mt>(logPath.string());
-    file->set_pattern(LOG_PATTERN);
-    logger->sinks().push_back(file);
-
-    logger->set_level(spdlog::level::info);
-    logger->flush_on(spdlog::level::info);
-    spdlog::cfg::load_env_levels();
+    Utils::InitializeLogger(programName, logPath);
     PruneRunLogs(directory, logPath);
-    logger->info("Logs: {}", logPath.string());
+    GetLogger().info("Logs: {}", logPath.string());
 }
 
 } // namespace
-
-auto GetLogger() -> spdlog::logger& {
-    return *spdlog::default_logger_raw();
-}
 
 auto RunTestProgram(
     const std::string_view programName,
@@ -143,8 +125,7 @@ auto RunTestProgram(
         result = 1;
     }
 
-    GetLogger().flush();
-    spdlog::shutdown();
+    Utils::ShutdownLogger();
     return result;
 }
 

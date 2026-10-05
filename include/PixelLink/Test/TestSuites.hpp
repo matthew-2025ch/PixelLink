@@ -93,7 +93,7 @@ namespace Frontend {
 
 } // namespace PixelLink::Test
 
-namespace PixelLink::Tests::Desktop {
+namespace PixelLink::Test::Desktop {
 
 namespace AudioTest {
     void run();
@@ -115,4 +115,4 @@ namespace LibraryPreviewTest {
     void run();
 }
 
-} // namespace PixelLink::Tests::Desktop
+} // namespace PixelLink::Test::Desktop

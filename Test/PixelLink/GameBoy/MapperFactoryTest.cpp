@@ -12,7 +12,7 @@ void run() {
         "Mapper / Factory creation",
         [] {
             MapperTestUtils::TempROM rom(
-                "mapper_Tests.gb",
+                "mapper_Test.gb",
                 0x13,
                 0x01,
                 0x03

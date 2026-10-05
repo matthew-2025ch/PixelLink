@@ -1,12 +1,12 @@
 #include <PixelLink/Test/TestFramework.hpp>
 #include <PixelLink/Test/TestSuites.hpp>
-#include "TestUtils.hpp"
+#include <PixelLink/TestUtils/Desktop.hpp>
 
 namespace fs = std::filesystem;
 using namespace PixelLink::Frontend;
-using namespace PixelLink::Tests::Desktop::TestUtils;
+using namespace PixelLink::Test::Desktop::TestUtils;
 
-namespace PixelLink::Tests::Desktop::LibraryPreviewTest {
+namespace PixelLink::Test::Desktop::LibraryPreviewTest {
 namespace {
 
 void testProjectLibraryPreview() {
@@ -18,7 +18,7 @@ void testProjectLibraryPreview() {
     app.Draw();
     CHECK(app.SaveScreenshot(ArtifactRoot() / "project-library.png"));
     CHECK(app.Present());
-    PixelLink::Test::GetLogger().info("SDL video driver: {}", SDL_GetCurrentVideoDriver());
+    PixelLink::Utils::GetLogger().info("SDL video driver: {}", SDL_GetCurrentVideoDriver());
 }
 
 } // namespace
@@ -27,4 +27,4 @@ void run() {
     PixelLink::Test::run("SDL application / actual project library preview", testProjectLibraryPreview);
 }
 
-} // namespace PixelLink::Tests::Desktop::LibraryPreviewTest
+} // namespace PixelLink::Test::Desktop::LibraryPreviewTest

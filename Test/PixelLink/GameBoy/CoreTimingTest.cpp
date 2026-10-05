@@ -5,7 +5,7 @@
 #include <PixelLink/Test/GameBoy/CPUAccess.hpp>
 #include <PixelLink/GameBoy/GameBoy.hpp>
 #include <PixelLink/Test/TestFramework.hpp>
-#include <PixelLink/Test/TestUtils.hpp>
+#include <PixelLink/TestUtils/GameBoy.hpp>
 
 using namespace PixelLink::GameBoy;
 

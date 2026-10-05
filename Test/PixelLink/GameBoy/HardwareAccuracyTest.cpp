@@ -85,4 +85,4 @@ void run() {
     }
 }
 
-} // namespace PixelLink::Tests::Gameboy::HardwareAccuracy
+} // namespace PixelLink::Test::GameBoy::HardwareAccuracy
