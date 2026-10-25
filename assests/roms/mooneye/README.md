@@ -55,7 +55,7 @@ individual CTest entries. For a multi-configuration generator, add
 ## Current limitations
 
 The measured result is **40 pass / 0 fail**, improved from the previous
-**26 pass / 14 fail** baseline. See [HardwareAccuracy.md](../../../HardwareAccuracy.md).
+**26 pass / 14 fail** baseline. See the [project README](../../../README.md#dmg-准确性与阶段验收).
 This is a DMG-focused subset, not validation of the full Mooneye suite,
 CGB/SGB variants, boot state, audio, or manual visual tests.
 
@@ -67,9 +67,11 @@ unit tests cover bit timing, abort/restart, external input/output,
 DIV independence and interrupt delivery. This single acceptance ROM does
 not provide comprehensive serial coverage.
 
-PPU transfer duration accounts for SCX, window and object penalties, but
-rendering remains scanline based. A complete pixel FIFO/fetcher and arbitrary
-mid-scanline register changes are not validated by this subset.
+The PPU now fetches background/window tile bytes and object pixels in dot-stepped
+phases and outputs through pixel FIFOs. Core regressions cover live palette,
+scroll and window writes, fetch latches, sprite priority and pipeline resets.
+The selected Mooneye subset still does not validate every mid-scanline race or
+hardware-revision quirk.
 
 Windows frontend targets deploy SDL3.dll beside their executables after
 linking when SDL is shared. `FrontendTest` first runs `Frontend::AudioTest::run()`

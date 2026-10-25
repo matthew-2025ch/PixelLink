@@ -1146,9 +1146,321 @@ void testFinalVBlankLineLY() {
     CHECK(ppu.GetMode() == PPU::Mode::OAMScan);
 }
 
+void testFIFOProgressiveOutputAndLivePalette() {
+    Bus bus;
+    configureBackground(bus);
+    writeSolidTile(bus, 0, 1);
+    PPU ppu(bus);
+    ppu.Step(96);
+    CHECK(pixel(ppu, 0, 0) == 0);
+    ppu.Step(1);
+    CHECK(pixel(ppu, 0, 0) == 1);
+    CHECK(pixel(ppu, 1, 0) == 0);
+    ppu.Step(39); // First 40 pixels have already reached the LCD.
+    bus.Write(BGP, 0x0C); // Map color 1 to shade 3.
+    ppu.Step(120);
+    CHECK(ppu.GetMode() == PPU::Mode::HBlank);
+    for (std::size_t x = 0; x < 160; ++x) {
+        CHECK(pixel(ppu, x, 0) == (x < 40 ? 1 : 3));
+    }
+}
+
+void testFIFOFineScrollAndTransferCompletion() {
+    for (uint8_t fine = 0; fine < 8; ++fine) {
+        Bus bus;
+        configureBackground(bus);
+        bus.Write(SCX, fine);
+        writeTileRow(bus, TILE_DATA_0, 0, 0x55, 0x33);
+        PPU ppu(bus);
+        ppu.Step(255 + fine);
+        CHECK(ppu.GetMode() == PPU::Mode::Drawing);
+        CHECK(pixel(ppu, 0, 0) == fine % 4);
+        ppu.Step(1);
+        CHECK(ppu.GetMode() == PPU::Mode::HBlank);
+        CHECK(pixel(ppu, 159, 0) == (159 + fine) % 4);
+    }
+}
+
+void testFIFOBytesLatchedBeforePixelOutput() {
+    Bus bus;
+    configureBackground(bus);
+    writeSolidTile(bus, 0, 1);
+    PPU ppu(bus);
+    ppu.Step(96); // Both planes of the first visible tile have been fetched.
+    writeTileRow(bus, TILE_DATA_0, 0, 0, 0); // CPU writes are blocked in Mode 3.
+    CHECK(bus.Read(TILE_DATA_0, BusAccess::Internal) == 0xFF);
+    bus.Write(TILE_DATA_0, 0, BusAccess::Internal);
+    ppu.Step(160);
+    for (std::size_t x = 0; x < 160; ++x) {
+        CHECK(pixel(ppu, x, 0) == (x < 8 ? 1 : 0));
+    }
+}
+
+void testFIFOSeparatePlaneReads() {
+    Bus bus;
+    configureBackground(bus);
+    writeTileRow(bus, TILE_DATA_0, 0, 0xFF, 0);
+    writeTileRow(bus, TILE_DATA_0, 1, 0, 0xFF);
+    PPU ppu(bus);
+    ppu.Step(94); // Low plane of the visible tile uses SCY=0.
+    bus.Write(SCY, 1);
+    ppu.Step(162);
+    CHECK(pixel(ppu, 0, 0) == 3); // High plane is fetched later using SCY=1.
+    CHECK(pixel(ppu, 7, 0) == 3);
+    CHECK(pixel(ppu, 8, 0) == 2);
+}
+
+void testFIFOLiveTileMapAndCoarseScroll() {
+    for (const bool changeMap : {false, true}) {
+        Bus bus;
+        configureBackground(bus);
+        writeSolidTile(bus, 0, 1);
+        writeSolidTile(bus, 1, 2);
+        for (int i = 0; i < 32; ++i) {
+            bus.Write(static_cast<uint16_t>(BG_MAP_0 + i), static_cast<uint8_t>(i & 1));
+            bus.Write(static_cast<uint16_t>(BG_MAP_1 + i), 1);
+        }
+        PPU ppu(bus);
+        ppu.Step(128);
+        CHECK(pixel(ppu, 0, 0) == 1);
+        if (changeMap) bus.Write(LCDC, 0x99);
+        else bus.Write(SCX, 8);
+        ppu.Step(128);
+        CHECK(pixel(ppu, 0, 0) == 1); // A later write cannot repaint old pixels.
+        CHECK(pixel(ppu, 80, 0) == 2);
+    }
+}
+
+void testFIFOWindowRestartAndClipping() {
+    for (uint8_t wx = 0; wx < 16; ++wx) {
+        Bus bus;
+        configureBackground(bus, 0xF1);
+        bus.Write(WX, wx);
+        writeSolidTile(bus, 0, 0);
+        writeSolidTile(bus, 1, 1);
+        bus.Write(BG_MAP_1, 1);
+        writeTileRow(bus, static_cast<uint16_t>(TILE_DATA_0 + 16), 0, 0x55, 0x33);
+        PPU ppu(bus);
+        ppu.Step(376);
+        CHECK(ppu.GetWindowLine() == 1);
+        for (int x = 0; x < 8; ++x) {
+            const int windowX = x - (static_cast<int>(wx) - 7);
+            CHECK(pixel(ppu, x, 0) == (windowX < 0 || windowX >= 8 ? 0 : windowX % 4));
+        }
+    }
+}
+
+void testFIFOWindowStartsDuringDrawing() {
+    Bus bus;
+    configureBackground(bus, 0xD1); // Window initially disabled.
+    writeSolidTile(bus, 0, 1);
+    writeSolidTile(bus, 1, 2);
+    for (int i = 0; i < 32; ++i) bus.Write(static_cast<uint16_t>(BG_MAP_1 + i), 1);
+    bus.Write(WX, 47);
+    PPU ppu(bus);
+    ppu.Step(128);
+    bus.Write(LCDC, 0xF1);
+    ppu.Step(133); // Baseline HBlank + six-dot window restart, less one dot.
+    CHECK(ppu.GetMode() == PPU::Mode::Drawing);
+    ppu.Step(1);
+    CHECK(ppu.GetMode() == PPU::Mode::HBlank);
+    CHECK(pixel(ppu, 39, 0) == 1);
+    CHECK(pixel(ppu, 40, 0) == 2);
+    CHECK(pixel(ppu, 159, 0) == 2);
+}
+
+void testFIFOWindowYComparisonIsLatched() {
+    Bus bus;
+    configureBackground(bus, 0xF1);
+    bus.Write(WY, 1);
+    PPU ppu(bus);
+    ppu.Step(456 + 4); // WY=LY during OAM search triggers the window this frame.
+    bus.Write(WY, 100);
+    ppu.Step(372);
+    CHECK(ppu.GetWindowLine() == 1);
+    ppu.Step(456);
+    CHECK(ppu.GetWindowLine() == 2);
+}
+
+void testFIFOObjectPaletteChangesDuringDrawing() {
+    Bus bus;
+    configureBackground(bus, 0x93);
+    writeSolidTile(bus, 0, 0);
+    writeSolidTile(bus, 1, 1);
+    writeSprite(bus, 0, 16, 8, 1);
+    PPU ppu(bus);
+    // Wait for the first object pixel, allowing for its fetch stall.
+    for (int dots = 0; dots < 150 && pixel(ppu, 0, 0) == 0; ++dots) ppu.Step(1);
+    CHECK(pixel(ppu, 0, 0) == 1);
+    bus.Write(OBP0, 0x0C);
+    ppu.Step(376 - ppu.GetLineDot());
+    CHECK(pixel(ppu, 0, 0) == 1);
+    CHECK(pixel(ppu, 1, 0) == 3);
+    CHECK(pixel(ppu, 7, 0) == 3);
+}
+
+void testFIFOOAMSearchLatchesCoordinates() {
+    Bus bus;
+    configureBackground(bus, 0x93);
+    writeSolidTile(bus, 0, 0);
+    writeSolidTile(bus, 1, 2);
+    writeSprite(bus, 0, 16, 8, 1);
+    PPU ppu(bus);
+    ppu.Step(84);
+    bus.Write(OAM + 1, 80, BusAccess::Internal); // Search result must survive later OAM changes.
+    ppu.Step(292);
+    CHECK(pixel(ppu, 0, 0) == 2);
+    CHECK(pixel(ppu, 72, 0) == 0);
+}
+
+void testFIFOLCDDisableFlushesPendingPixels() {
+    Bus bus;
+    configureBackground(bus, 0xF3);
+    writeSolidTile(bus, 0, 1);
+    writeSolidTile(bus, 1, 3);
+    writeSprite(bus, 0, 16, 8, 1);
+    PPU ppu(bus);
+    ppu.Step(130);
+    bus.Write(LCDC, 0);
+    CHECK(ppu.GetLY() == 0);
+    CHECK(ppu.GetLineDot() == 0);
+    CHECK(ppu.GetWindowLine() == 0);
+    CHECK(pixel(ppu, 0, 0) == 0);
+    writeSolidTile(bus, 0, 2);
+    bus.Write(LCDC, 0x91);
+    ppu.Step(376);
+    CHECK(pixel(ppu, 0, 0) == 2);
+    CHECK(pixel(ppu, 159, 0) == 2);
+    CHECK(ppu.GetWindowLine() == 0);
+}
+
+void testFIFOWindowDisableResumesBackground() {
+    Bus bus;
+    configureBackground(bus, 0xF1);
+    writeSolidTile(bus, 0, 1);
+    writeSolidTile(bus, 1, 2);
+    for (int i = 0; i < 32; ++i) bus.Write(static_cast<uint16_t>(BG_MAP_1 + i), 1);
+    PPU ppu(bus);
+    ppu.Step(142); // 40 window pixels have been emitted after the six-dot restart.
+    CHECK(pixel(ppu, 39, 0) == 2);
+    bus.Write(LCDC, 0xD1);
+    ppu.Step(234);
+    CHECK(pixel(ppu, 0, 0) == 2);
+    CHECK(pixel(ppu, 40, 0) == 1);
+    CHECK(pixel(ppu, 159, 0) == 1);
+    CHECK(ppu.GetWindowLine() == 1);
+}
+
+void testFIFOWindowDoesNotTriggerBehindOutput() {
+    Bus bus;
+    configureBackground(bus, 0xD1);
+    writeSolidTile(bus, 0, 1);
+    writeSolidTile(bus, 1, 2);
+    bus.Write(BG_MAP_1, 1);
+    PPU ppu(bus);
+    ppu.Step(128);
+    bus.Write(LCDC, 0xF1); // WX=7's comparison has already passed this line.
+    ppu.Step(248);
+    CHECK(pixel(ppu, 0, 0) == 1);
+    CHECK(pixel(ppu, 32, 0) == 1);
+    CHECK(ppu.GetWindowLine() == 0);
+    ppu.Step(456);
+    CHECK(pixel(ppu, 0, 1) == 2);
+    CHECK(ppu.GetWindowLine() == 1);
+}
+
+void testFIFOObjectFetchCancellation() {
+    Bus bus;
+    configureBackground(bus, 0x93);
+    writeSolidTile(bus, 0, 1);
+    writeSolidTile(bus, 1, 2);
+    writeSprite(bus, 0, 16, 8, 1);
+    PPU ppu(bus);
+    ppu.Step(103); // During the object's tile fetch, before any LCD pixel.
+    bus.Write(LCDC, 0x91);
+    ppu.Step(273);
+    CHECK(ppu.GetMode() == PPU::Mode::HBlank);
+    CHECK(pixel(ppu, 0, 0) == 1);
+    CHECK(pixel(ppu, 7, 0) == 1);
+    CHECK(pixel(ppu, 159, 0) == 1);
+}
+
+void testFIFOObjectTileAndByteLatches() {
+    Bus bus;
+    configureBackground(bus, 0x93);
+    writeSolidTile(bus, 0, 0);
+    writeSolidTile(bus, 1, 1);
+    writeSolidTile(bus, 2, 2);
+    writeSprite(bus, 0, 16, 8, 1);
+    PPU ppu(bus);
+    ppu.Step(84);
+    bus.Write(OAM + 2, 2, BusAccess::Internal); // Tile is read during fetch, after OAM search.
+    for (int dots = 0; dots < 100 && pixel(ppu, 0, 0) == 0; ++dots) ppu.Step(1);
+    CHECK(pixel(ppu, 0, 0) == 2);
+    bus.Write(TILE_DATA_0 + 2 * 16 + 1, 0, BusAccess::Internal);
+    ppu.Step(376 - ppu.GetLineDot());
+    CHECK(pixel(ppu, 7, 0) == 2); // Already queued sprite pixels keep their fetched bytes.
+}
+
+void testFIFOObjectClippingAndOcclusion() {
+    Bus bus;
+    configureBackground(bus, 0x93);
+    writeSolidTile(bus, 0, 1);
+    writeSolidTile(bus, 1, 2);
+    writeSolidTile(bus, 2, 3);
+    writeSprite(bus, 0, 16, 4, 1, 0x80); // Winner is behind nonzero BG.
+    writeSprite(bus, 1, 16, 4, 2);       // Must not show through the winning object.
+    writeSprite(bus, 2, 16, 167, 2);     // Only its first pixel is on-screen.
+    PPU ppu(bus);
+    ppu.Step(376);
+    CHECK(pixel(ppu, 0, 0) == 1);
+    CHECK(pixel(ppu, 3, 0) == 1);
+    CHECK(pixel(ppu, 158, 0) == 1);
+    CHECK(pixel(ppu, 159, 0) == 3);
+}
+
+void testFIFOChunkIndependentStepping() {
+    Bus batchedBus, singleBus;
+    for (auto* bus : {&batchedBus, &singleBus}) {
+        configureBackground(*bus, 0xF7);
+        bus->Write(SCX, 5);
+        bus->Write(WX, 63);
+        writeSolidTile(*bus, 0, 1);
+        writeSolidTile(*bus, 1, 2);
+        for (int i = 0; i < 32; ++i) bus->Write(static_cast<uint16_t>(BG_MAP_1 + i), 1);
+        for (int i = 0; i < 10; ++i) writeSprite(*bus, i, 16, static_cast<uint8_t>(i * 15), 1);
+    }
+    PPU batched(batchedBus), single(singleBus);
+    for (int line = 0; line < 154; ++line) {
+        batched.Step(456);
+        for (int dot = 0; dot < 456; ++dot) single.Step(1);
+        CHECK(batched.GetFramebuffer() == single.GetFramebuffer());
+        CHECK(batched.GetMode() == single.GetMode());
+        CHECK(batched.GetLY() == single.GetLY());
+        CHECK(batched.GetWindowLine() == single.GetWindowLine());
+    }
+}
+
 } // namespace
 
 void run() {
+    Test::run("PPU FIFO / progressive output and live BG palette", testFIFOProgressiveOutputAndLivePalette);
+    Test::run("PPU FIFO / fine scroll and last-pixel HBlank", testFIFOFineScrollAndTransferCompletion);
+    Test::run("PPU FIFO / fetched bytes survive later VRAM writes", testFIFOBytesLatchedBeforePixelOutput);
+    Test::run("PPU FIFO / separate low and high plane fetches", testFIFOSeparatePlaneReads);
+    Test::run("PPU FIFO / live tile map and coarse scroll", testFIFOLiveTileMapAndCoarseScroll);
+    Test::run("PPU FIFO / window restart and left clipping", testFIFOWindowRestartAndClipping);
+    Test::run("PPU FIFO / window enable during drawing", testFIFOWindowStartsDuringDrawing);
+    Test::run("PPU FIFO / WY comparison latch", testFIFOWindowYComparisonIsLatched);
+    Test::run("PPU FIFO / live OBJ palette", testFIFOObjectPaletteChangesDuringDrawing);
+    Test::run("PPU FIFO / OAM search coordinate latch", testFIFOOAMSearchLatchesCoordinates);
+    Test::run("PPU FIFO / LCD disable flush and restart", testFIFOLCDDisableFlushesPendingPixels);
+    Test::run("PPU FIFO / window disable resumes BG", testFIFOWindowDisableResumesBackground);
+    Test::run("PPU FIFO / window edge already passed", testFIFOWindowDoesNotTriggerBehindOutput);
+    Test::run("PPU FIFO / OBJ fetch cancellation", testFIFOObjectFetchCancellation);
+    Test::run("PPU FIFO / OBJ tile and byte latches", testFIFOObjectTileAndByteLatches);
+    Test::run("PPU FIFO / clipped objects and BG occlusion", testFIFOObjectClippingAndOcclusion);
+    Test::run("PPU FIFO / step chunk invariance over a frame", testFIFOChunkIndependentStepping);
     Test::run("PPU / separate read and write port boundaries", testSeparateReadWriteBoundaries);
     Test::run("PPU / final VBlank line LY and read-only register", testFinalVBlankLineLY);
     Test::run("PPU / visible scanline timing", testVisibleScanlineTiming);

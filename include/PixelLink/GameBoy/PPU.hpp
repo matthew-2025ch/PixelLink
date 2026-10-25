@@ -72,7 +72,6 @@ private:
     static constexpr std::uint16_t OAM_BASE                = 0xFE00;
 
     static constexpr std::uint16_t OAM_SCAN_END  = 84;
-    static constexpr std::uint16_t DRAWING_END   = OAM_SCAN_END + 172;
     static constexpr std::uint16_t DOTS_PER_LINE = 456;
 
     static constexpr std::uint8_t VISIBLE_LINES = 144;
@@ -89,7 +88,6 @@ private:
     std::uint8_t windowLine_ = 0;
     std::uint8_t physicalLine_ = 0;
     bool firstLineAfterEnable_ = false;
-    std::uint16_t drawingEnd_ = DRAWING_END;
 
     // Previous state of the combined STAT interrupt line.
     // STAT requests an interrupt only on a low-to-high transition.
@@ -97,9 +95,47 @@ private:
 
     Framebuffer framebuffer_{};
 
-    // Raw BG/Window color IDs for the current scanline.
-    // Sprite priority depends on the color ID, not the final palette shade.
-    std::array<std::uint8_t, SCREEN_WIDTH> bgColorIds_{};
+    // Fetch bytes on separate two-dot phases; apply palettes only at LCD output.
+    enum class FetchPhase { Tile, Low, High, Sleep, Push };
+    FetchPhase fetchPhase_ = FetchPhase::Tile;
+    std::uint8_t fetchDot_ = 0;
+    std::uint8_t fetchTile_ = 0;
+    std::uint8_t fetchLow_ = 0;
+    std::uint8_t fetchHigh_ = 0;
+    std::uint16_t fetchAddress_ = 0;
+    std::uint8_t fetchX_ = 0;
+    bool discardFirstTile_ = true;
+    std::array<std::uint8_t, 16> backgroundFIFO_{};
+    std::size_t backgroundHead_ = 0;
+    std::size_t backgroundSize_ = 0;
+
+    struct ObjectPixel {
+        std::uint8_t color = 0;
+        std::uint8_t attributes = 0;
+    };
+    std::array<ObjectPixel, 8> objectFIFO_{};
+    std::size_t objectHead_ = 0;
+    std::array<Sprite, MAX_SPRITES_PER_LINE> lineSprites_{};
+    std::size_t spriteCount_ = 0;
+    std::size_t nextSprite_ = 0;
+    Sprite fetchingSprite_{};
+    std::uint8_t spriteFetchDot_ = 0;
+    std::uint8_t spriteLow_ = 0;
+    std::uint8_t spriteHigh_ = 0;
+    std::uint16_t spriteAddress_ = 0;
+    int spriteWait_ = 0;
+    int previousSpriteTile_ = -1;
+    bool objectFetchActive_ = false;
+    bool firstObjectFetch_ = true;
+
+    std::uint16_t outputX_ = 0;
+    std::uint8_t startupDots_ = 0;
+    std::uint8_t discardPixels_ = 0;
+    std::uint8_t fineScroll_ = 0;
+    bool windowYTriggered_ = false;
+    bool windowActive_ = false;
+    bool windowRendered_ = false;
+    int windowLeft_ = 0;
 
     [[nodiscard]] bool IsLCDEnabled() const;
 
@@ -113,7 +149,17 @@ private:
     );
 
     void StepOneDot();
-    [[nodiscard]] std::uint16_t TransferPenalty() const;
+    void ResetPipeline();
+    void ScanOAM();
+    void BeginDrawing();
+    void StepDrawing();
+    void ResetFetcher(bool discardFirstTile);
+    void StepFetcher();
+    [[nodiscard]] bool PushBackgroundPixels();
+    [[nodiscard]] bool StartObjectFetch();
+    void StepObjectFetcher();
+    void MergeObjectPixels();
+    void OutputPixel();
     void SetMode(Mode mode);
     void SetLY(std::uint8_t value);
     void UpdateSTAT();
@@ -121,10 +167,6 @@ private:
     void RequestVBlankInterrupt();
     void RequestSTATInterrupt();
 
-    void RenderScanline();
-    void RenderBackgroundScanline();
-    [[nodiscard]] bool RenderWindowScanline();
-    void RenderSpriteScanline();
 
     [[nodiscard]] std::uint16_t GetBackgroundTileMapBase(
         std::uint8_t lcdc
@@ -138,12 +180,6 @@ private:
         std::uint8_t tileId,
         std::uint8_t lcdc
     ) const noexcept;
-
-    [[nodiscard]] std::uint8_t DecodeTilePixel(
-        std::uint16_t tileAddress,
-        std::uint8_t row,
-        std::uint8_t column
-    ) const;
 
     [[nodiscard]] static std::uint8_t ApplyPalette(
         std::uint8_t colorId,

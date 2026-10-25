@@ -23,12 +23,12 @@ void PPU::Reset() {
     lineDot_ = 0;
     physicalLine_ = 0;
     firstLineAfterEnable_ = false;
-    drawingEnd_ = DRAWING_END;
     windowLine_ = 0;
     statInterruptLine_ = false;
 
     framebuffer_.fill(0);
-    bgColorIds_.fill(0);
+    ResetPipeline();
+    windowYTriggered_ = ReadBus(WY) == 0;
 
     SetLY(0);
 
@@ -127,55 +127,258 @@ void PPU::OnRegisterWrite(const std::uint16_t address, const std::uint8_t oldVal
         ly_ = 0;
         WriteBus(LY, 0);
         windowLine_ = 0;
+        ResetPipeline();
+        windowYTriggered_ = ReadBus(WY) == 0;
+        if (!IsLCDEnabled()) framebuffer_.fill(0);
         mode_ = Mode::HBlank;
         firstLineAfterEnable_ = IsLCDEnabled();
     }
     UpdateSTAT();
 }
 
-std::uint16_t PPU::TransferPenalty() const {
+void PPU::ResetFetcher(const bool discardFirstTile) {
+    fetchPhase_ = FetchPhase::Tile;
+    fetchDot_ = 0;
+    fetchX_ = 0;
+    backgroundHead_ = backgroundSize_ = 0;
+    discardFirstTile_ = discardFirstTile;
+}
+
+void PPU::ResetPipeline() {
+    ResetFetcher(true);
+    objectFIFO_.fill({});
+    objectHead_ = 0;
+    spriteCount_ = nextSprite_ = 0;
+    objectFetchActive_ = false;
+    spriteFetchDot_ = 0;
+    spriteWait_ = 0;
+    previousSpriteTile_ = -1;
+    firstObjectFetch_ = true;
+    outputX_ = 0;
+    startupDots_ = 0;
+    discardPixels_ = fineScroll_ = 0;
+    windowActive_ = windowRendered_ = false;
+    windowLeft_ = 0;
+}
+
+void PPU::ScanOAM() {
+    if (mode_ == Mode::Drawing) return;
+    const int start = firstLineAfterEnable_ ? 0 : 4;
+    const int elapsed = lineDot_ - start;
+    if (elapsed < 2 || elapsed > 80 || (elapsed & 1) != 0) return;
+    const auto index = static_cast<std::uint8_t>(elapsed / 2 - 1);
+    const auto address = static_cast<std::uint16_t>(OAM_BASE + index * 4);
+    const auto y = ReadBus(address);
+    const auto x = ReadBus(address + 1);
+    const int height = (ReadBus(LCDC) & 4) != 0 ? 16 : 8;
+    const int row = static_cast<int>(ly_) + 16 - y;
+    if (row >= 0 && row < height && spriteCount_ < lineSprites_.size()) {
+        lineSprites_[spriteCount_++] = Sprite{.oamIndex = index, .y = y, .x = x};
+    }
+}
+
+void PPU::BeginDrawing() {
+    ResetFetcher(true);
+    fineScroll_ = ReadBus(SCX) & 7;
+    discardPixels_ = fineScroll_;
+    startupDots_ = 12;
+    std::sort(lineSprites_.begin(), lineSprites_.begin() + spriteCount_,
+        [](const Sprite& a, const Sprite& b) {
+            return a.x != b.x ? a.x < b.x : a.oamIndex < b.oamIndex;
+        });
+    mode_ = Mode::Drawing;
+}
+
+bool PPU::PushBackgroundPixels() {
+    if (discardFirstTile_) {
+        discardFirstTile_ = false;
+        return true;
+    }
+    if (backgroundSize_ > 8) return false;
+    for (int bit = 7; bit >= 0; --bit) {
+        const auto tail = (backgroundHead_ + backgroundSize_) % backgroundFIFO_.size();
+        backgroundFIFO_[tail] = static_cast<std::uint8_t>(
+            ((fetchLow_ >> bit) & 1) | (((fetchHigh_ >> bit) & 1) << 1));
+        ++backgroundSize_;
+    }
+    ++fetchX_;
+    return true;
+}
+
+void PPU::StepFetcher() {
+    if (fetchPhase_ == FetchPhase::Push) {
+        if (PushBackgroundPixels()) {
+            fetchPhase_ = FetchPhase::Tile;
+            fetchDot_ = 0;
+        }
+        return;
+    }
+    if (++fetchDot_ < 2) return;
+    fetchDot_ = 0;
     const auto lcdc = ReadBus(LCDC);
-    const int scx = ReadBus(SCX) & 7;
-    int penalty = scx;
-    bool fetchedObject = false;
-    const bool windowVisible = (lcdc & 0x21) == 0x21 &&
-        ly_ >= ReadBus(WY) && ReadBus(WX) <= 166;
-    if (windowVisible) {
-        penalty += 6;
+    switch (fetchPhase_) {
+    case FetchPhase::Tile: {
+        const auto y = windowActive_ ? windowLine_ :
+            static_cast<std::uint8_t>(ly_ + ReadBus(SCY));
+        const auto x = windowActive_ ? fetchX_ :
+            static_cast<std::uint8_t>((ReadBus(SCX) / 8 + fetchX_) & 31);
+        const auto map = windowActive_ ? GetWindowTileMapBase(lcdc) : GetBackgroundTileMapBase(lcdc);
+        fetchTile_ = ReadBus(static_cast<std::uint16_t>(map + (y / 8) * 32 + (x & 31)));
+        fetchPhase_ = FetchPhase::Low;
+        break;
     }
-    if ((lcdc & 2) != 0) {
-        std::array<int, MAX_SPRITES_PER_LINE> positions{};
-        std::size_t count = 0;
-        const int height = (lcdc & 4) != 0 ? 16 : 8;
-        for (std::size_t i = 0; i < OAM_SPRITE_COUNT && count < positions.size(); ++i) {
-            const auto address = static_cast<std::uint16_t>(OAM_BASE + 4 * i);
-            const int top = static_cast<int>(ReadBus(address)) - 16;
-            if (ly_ >= top && ly_ < top + height) {
-                positions[count++] = ReadBus(address + 1);
+    case FetchPhase::Low:
+    case FetchPhase::High: {
+        // DMG samples SCY and LCDC's tile-data selection on each plane read.
+        const auto y = windowActive_ ? windowLine_ :
+            static_cast<std::uint8_t>(ly_ + ReadBus(SCY));
+        fetchAddress_ = static_cast<std::uint16_t>(GetTileDataAddress(fetchTile_, lcdc) + (y & 7) * 2);
+        if (fetchPhase_ == FetchPhase::Low) {
+            fetchLow_ = ReadBus(fetchAddress_);
+            fetchPhase_ = FetchPhase::High;
+        } else {
+            fetchHigh_ = ReadBus(fetchAddress_ + 1);
+            // First fetch is discarded; the visible fetch starts immediately.
+            const bool first = discardFirstTile_;
+            if (PushBackgroundPixels()) {
+                fetchPhase_ = first ? FetchPhase::Tile : FetchPhase::Sleep;
+            } else {
+                fetchPhase_ = FetchPhase::Push;
             }
         }
-        std::sort(positions.begin(), positions.begin() + count);
-        int previousTile = -100;
-        for (std::size_t i = 0; i < count; ++i) {
-            const int x = positions[i];
-            if (x >= 168) {
-                continue;
-            }
-            const int pixel = x + scx;
-            const int tile = pixel / 8;
-            penalty += 6; // every selected object needs its tile fetch
-            fetchedObject = true;
-            if (tile != previousTile) {
-                penalty += std::max(5 - (pixel & 7), 0);
-                previousTile = tile;
-            }
-        }
+        break;
     }
-    if (fetchedObject) {
-        // Resuming pixel output overlaps the final object fetch dot.
-        --penalty;
+    case FetchPhase::Sleep:
+        fetchPhase_ = FetchPhase::Tile;
+        break;
+    case FetchPhase::Push:
+        break;
     }
-    return static_cast<std::uint16_t>(penalty);
+}
+
+bool PPU::StartObjectFetch() {
+    while (nextSprite_ < spriteCount_) {
+        const auto& sprite = lineSprites_[nextSprite_];
+        if (sprite.x >= 168 || static_cast<int>(sprite.x) - 8 > outputX_) return false;
+        ++nextSprite_;
+        if ((ReadBus(LCDC) & 2) == 0) continue;
+        fetchingSprite_ = sprite;
+        const int position = windowActive_ ? static_cast<int>(outputX_) - windowLeft_ : sprite.x + fineScroll_;
+        const int tile = position / 8;
+        spriteWait_ = tile != previousSpriteTile_ ? std::max(5 - (position & 7), 0) : 0;
+        previousSpriteTile_ = tile;
+        // The first object fetch shares its first dot with the BG handoff.
+        spriteFetchDot_ = firstObjectFetch_ ? 1 : 0;
+        firstObjectFetch_ = false;
+        objectFetchActive_ = true;
+        return true;
+    }
+    return false;
+}
+
+void PPU::StepObjectFetcher() {
+    if ((ReadBus(LCDC) & 2) == 0) {
+        objectFetchActive_ = false;
+        return;
+    }
+    if (spriteWait_ > 0) {
+        --spriteWait_;
+        StepFetcher();
+        return;
+    }
+    ++spriteFetchDot_;
+    if (spriteFetchDot_ == 2) {
+        const auto address = static_cast<std::uint16_t>(OAM_BASE + fetchingSprite_.oamIndex * 4);
+        fetchingSprite_.tileId = ReadBus(address + 2);
+        fetchingSprite_.attributes = ReadBus(address + 3);
+        const int height = (ReadBus(LCDC) & 4) != 0 ? 16 : 8;
+        int row = static_cast<int>(ly_) + 16 - fetchingSprite_.y;
+        if ((fetchingSprite_.attributes & 0x40) != 0) row = height - 1 - row;
+        const int tile = height == 16 ? (fetchingSprite_.tileId & 0xFE) + row / 8 : fetchingSprite_.tileId;
+        spriteAddress_ = static_cast<std::uint16_t>(TILE_DATA_UNSIGNED_BASE + tile * 16 + (row & 7) * 2);
+    } else if (spriteFetchDot_ == 4) {
+        spriteLow_ = ReadBus(spriteAddress_);
+    } else if (spriteFetchDot_ == 6) {
+        spriteHigh_ = ReadBus(spriteAddress_ + 1);
+        MergeObjectPixels();
+        objectFetchActive_ = false;
+    }
+}
+
+void PPU::MergeObjectPixels() {
+    const int left = static_cast<int>(fetchingSprite_.x) - 8;
+    for (int column = 0; column < 8; ++column) {
+        const int offset = left + column - outputX_;
+        if (offset < 0 || offset >= 8) continue;
+        const int bit = (fetchingSprite_.attributes & 0x20) != 0 ? column : 7 - column;
+        const auto color = static_cast<std::uint8_t>(
+            ((spriteLow_ >> bit) & 1) | (((spriteHigh_ >> bit) & 1) << 1));
+        auto& pixel = objectFIFO_[(objectHead_ + offset) % objectFIFO_.size()];
+        if (pixel.color == 0 && color != 0) pixel = {color, fetchingSprite_.attributes};
+    }
+}
+
+void PPU::OutputPixel() {
+    auto background = backgroundFIFO_[backgroundHead_];
+    backgroundHead_ = (backgroundHead_ + 1) % backgroundFIFO_.size();
+    --backgroundSize_;
+    if (discardPixels_ != 0) {
+        --discardPixels_;
+        return;
+    }
+    const auto lcdc = ReadBus(LCDC);
+    if ((lcdc & 1) == 0) background = 0;
+    const auto object = objectFIFO_[objectHead_];
+    objectFIFO_[objectHead_] = {};
+    objectHead_ = (objectHead_ + 1) % objectFIFO_.size();
+    const bool showObject = (lcdc & 2) != 0 && object.color != 0 &&
+        ((object.attributes & 0x80) == 0 || background == 0);
+    const auto shade = showObject
+        ? ApplyPalette(object.color, ReadBus((object.attributes & 0x10) != 0 ? OBP1 : OBP0))
+        : ApplyPalette(background, ReadBus(BGP));
+    framebuffer_[static_cast<std::size_t>(ly_) * SCREEN_WIDTH + outputX_] = shade;
+    windowRendered_ |= windowActive_;
+    if (++outputX_ == SCREEN_WIDTH) {
+        if (windowRendered_) ++windowLine_;
+        mode_ = Mode::HBlank;
+    }
+}
+
+void PPU::StepDrawing() {
+    if (startupDots_ != 0) {
+        StepFetcher();
+        --startupDots_;
+        return;
+    }
+    if (objectFetchActive_) {
+        StepObjectFetcher();
+        return;
+    }
+    // The window restarts the BG fetcher at its on-screen edge, costing six dots.
+    const auto lcdc = ReadBus(LCDC);
+    const int left = static_cast<int>(ReadBus(WX)) - 7;
+    if (windowActive_ && (lcdc & 0x21) != 0x21) {
+        // Resume the background at the current screen coordinate, not tile zero.
+        windowActive_ = false;
+        ResetFetcher(false);
+        const int backgroundX = outputX_ + ReadBus(SCX);
+        fetchX_ = static_cast<std::uint8_t>((outputX_ + (ReadBus(SCX) & 7)) / 8);
+        discardPixels_ = static_cast<std::uint8_t>(backgroundX & 7);
+    }
+    if (!windowActive_ && discardPixels_ == 0 && windowYTriggered_ &&
+        (lcdc & 0x21) == 0x21 && left < 160 && outputX_ == std::max(left, 0)) {
+        windowActive_ = true;
+        windowLeft_ = left;
+        previousSpriteTile_ = -1;
+        ResetFetcher(false);
+        discardPixels_ = static_cast<std::uint8_t>(std::max(-left, 0));
+    }
+    if (discardPixels_ == 0 && StartObjectFetch()) {
+        StepObjectFetcher();
+        return;
+    }
+    if (backgroundSize_ != 0) OutputPixel();
+    if (mode_ == Mode::Drawing) StepFetcher();
 }
 
 void PPU::StepOneDot() {
@@ -184,17 +387,16 @@ void PPU::StepOneDot() {
     }
     ++lineDot_;
     if (physicalLine_ < VISIBLE_LINES) {
+        ScanOAM();
         if (!firstLineAfterEnable_ && lineDot_ == 4) {
             mode_ = Mode::OAMScan;
+            windowYTriggered_ |= ly_ == ReadBus(WY);
         }
         const auto mode3Start = firstLineAfterEnable_ ? 78 : OAM_SCAN_END;
         if (lineDot_ == mode3Start) {
-            drawingEnd_ = static_cast<std::uint16_t>(
-                mode3Start + 172 + TransferPenalty());
-            mode_ = Mode::Drawing;
-        } else if (lineDot_ == drawingEnd_ && mode_ == Mode::Drawing) {
-            RenderScanline();
-            mode_ = Mode::HBlank;
+            BeginDrawing();
+        } else if (mode_ == Mode::Drawing) {
+            StepDrawing();
         }
     }
     if (physicalLine_ == VISIBLE_LINES && lineDot_ == 4) {
@@ -216,7 +418,9 @@ void PPU::StepOneDot() {
         WriteBus(LY, ly_);
         if (physicalLine_ == 0) {
             windowLine_ = 0;
+            windowYTriggered_ = false;
         }
+        ResetPipeline();
         if (physicalLine_ > VISIBLE_LINES) {
             mode_ = Mode::VBlank;
         } else {
@@ -324,367 +528,6 @@ void PPU::RequestSTATInterrupt() {
     );
 }
 
-void PPU::RenderScanline() {
-    if (ly_ >= SCREEN_HEIGHT) {
-        return;
-    }
-
-    RenderBackgroundScanline();
-
-    if (RenderWindowScanline()) {
-        ++windowLine_;
-    }
-
-    RenderSpriteScanline();
-}
-
-void PPU::RenderBackgroundScanline() {
-    const std::uint8_t lcdc = ReadBus(LCDC);
-    const std::uint8_t palette = ReadBus(BGP);
-
-    const std::size_t rowStart =
-        static_cast<std::size_t>(ly_) * SCREEN_WIDTH;
-
-    // In DMG mode LCDC.0 disables both BG and Window.
-    if ((lcdc & 0x01u) == 0) {
-        const std::uint8_t shade = ApplyPalette(0, palette);
-
-        for (std::size_t x = 0; x < SCREEN_WIDTH; ++x) {
-            bgColorIds_[x] = 0;
-            framebuffer_[rowStart + x] = shade;
-        }
-
-        return;
-    }
-
-    const std::uint8_t scrollX = ReadBus(SCX);
-    const std::uint8_t scrollY = ReadBus(SCY);
-
-    // uint8_t conversion intentionally provides 256-pixel wrapping.
-    const std::uint8_t backgroundY = static_cast<std::uint8_t>(
-        static_cast<std::uint16_t>(scrollY) +
-        static_cast<std::uint16_t>(ly_)
-    );
-
-    const std::uint8_t tileY =
-        static_cast<std::uint8_t>(backgroundY / 8u);
-
-    const std::uint8_t pixelY =
-        static_cast<std::uint8_t>(backgroundY % 8u);
-
-    const std::uint16_t tileMapBase =
-        GetBackgroundTileMapBase(lcdc);
-
-    for (std::size_t screenX = 0;
-         screenX < SCREEN_WIDTH;
-         ++screenX) {
-        const std::uint8_t backgroundX =
-            static_cast<std::uint8_t>(
-                static_cast<std::uint16_t>(scrollX) +
-                static_cast<std::uint16_t>(screenX)
-            );
-
-        const std::uint8_t tileX =
-            static_cast<std::uint8_t>(backgroundX / 8u);
-
-        const std::uint8_t pixelX =
-            static_cast<std::uint8_t>(backgroundX % 8u);
-
-        const std::uint16_t tileMapAddress =
-            static_cast<std::uint16_t>(
-                tileMapBase +
-                static_cast<std::uint16_t>(tileY) * 32u +
-                tileX
-            );
-
-        const std::uint8_t tileId =
-            ReadBus(tileMapAddress);
-
-        const std::uint16_t tileAddress =
-            GetTileDataAddress(tileId, lcdc);
-
-        const std::uint8_t colorId =
-            DecodeTilePixel(
-                tileAddress,
-                pixelY,
-                pixelX
-            );
-
-        bgColorIds_[screenX] = colorId;
-        framebuffer_[rowStart + screenX] =
-            ApplyPalette(colorId, palette);
-    }
-}
-
-bool PPU::RenderWindowScanline() {
-    const std::uint8_t lcdc = ReadBus(LCDC);
-
-    const bool backgroundWindowEnabled =
-        (lcdc & 0x01u) != 0;
-
-    const bool windowEnabled =
-        (lcdc & 0x20u) != 0;
-
-    if (!backgroundWindowEnabled || !windowEnabled) {
-        return false;
-    }
-
-    const std::uint8_t windowYPosition = ReadBus(WY);
-
-    if (ly_ < windowYPosition) {
-        return false;
-    }
-
-    const std::uint8_t windowXRegister = ReadBus(WX);
-
-    // WX = 167 places the first Window pixel at screen X = 160,
-    // so no Window pixel is visible.
-    if (windowXRegister > 166u) {
-        return false;
-    }
-
-    const int windowLeft =
-        static_cast<int>(windowXRegister) - 7;
-
-    const int firstVisibleX =
-        std::max(0, windowLeft);
-
-    if (firstVisibleX >= static_cast<int>(SCREEN_WIDTH)) {
-        return false;
-    }
-
-    const std::uint8_t palette = ReadBus(BGP);
-    const std::uint16_t tileMapBase =
-        GetWindowTileMapBase(lcdc);
-
-    const std::uint8_t windowY = windowLine_;
-    const std::uint8_t tileY =
-        static_cast<std::uint8_t>(windowY / 8u);
-    const std::uint8_t pixelY =
-        static_cast<std::uint8_t>(windowY % 8u);
-
-    const std::size_t rowStart =
-        static_cast<std::size_t>(ly_) * SCREEN_WIDTH;
-
-    for (int screenX = firstVisibleX;
-         screenX < static_cast<int>(SCREEN_WIDTH);
-         ++screenX) {
-        const int windowX =
-            screenX - windowLeft;
-
-        const std::uint8_t tileX =
-            static_cast<std::uint8_t>(
-                static_cast<unsigned int>(windowX) / 8u
-            );
-
-        const std::uint8_t pixelX =
-            static_cast<std::uint8_t>(
-                static_cast<unsigned int>(windowX) % 8u
-            );
-
-        const std::uint16_t tileMapAddress =
-            static_cast<std::uint16_t>(
-                tileMapBase +
-                static_cast<std::uint16_t>(tileY) * 32u +
-                tileX
-            );
-
-        const std::uint8_t tileId =
-            ReadBus(tileMapAddress);
-
-        const std::uint16_t tileAddress =
-            GetTileDataAddress(tileId, lcdc);
-
-        const std::uint8_t colorId =
-            DecodeTilePixel(
-                tileAddress,
-                pixelY,
-                pixelX
-            );
-
-        const std::size_t x =
-            static_cast<std::size_t>(screenX);
-
-        bgColorIds_[x] = colorId;
-        framebuffer_[rowStart + x] =
-            ApplyPalette(colorId, palette);
-    }
-
-    return true;
-}
-
-void PPU::RenderSpriteScanline() {
-    const std::uint8_t lcdc = ReadBus(LCDC);
-
-    if ((lcdc & 0x02u) == 0) {
-        return;
-    }
-
-    const int spriteHeight =
-        (lcdc & 0x04u) != 0 ? 16 : 8;
-
-    std::array<Sprite, MAX_SPRITES_PER_LINE> sprites{};
-    std::size_t spriteCount = 0;
-
-    // OAM search keeps the first 10 matching objects in OAM order.
-    for (std::size_t i = 0;
-         i < OAM_SPRITE_COUNT &&
-         spriteCount < MAX_SPRITES_PER_LINE;
-         ++i) {
-        const std::uint16_t address =
-            static_cast<std::uint16_t>(
-                OAM_BASE + i * 4u
-            );
-
-        Sprite sprite{
-            .oamIndex = static_cast<std::uint8_t>(i),
-            .y = ReadBus(address),
-            .x = ReadBus(
-                static_cast<std::uint16_t>(address + 1u)
-            ),
-            .tileId = ReadBus(
-                static_cast<std::uint16_t>(address + 2u)
-            ),
-            .attributes = ReadBus(
-                static_cast<std::uint16_t>(address + 3u)
-            ),
-        };
-
-        const int spriteTop =
-            static_cast<int>(sprite.y) - 16;
-
-        const int currentLine =
-            static_cast<int>(ly_);
-
-        if (currentLine >= spriteTop &&
-            currentLine < spriteTop + spriteHeight) {
-            sprites[spriteCount++] = sprite;
-        }
-    }
-
-    // On DMG, overlapping object priority is:
-    // smaller X first, then smaller OAM index.
-    std::sort(
-        sprites.begin(),
-        sprites.begin() +
-            static_cast<std::ptrdiff_t>(spriteCount),
-        [](const Sprite& left, const Sprite& right) {
-            if (left.x != right.x) {
-                return left.x < right.x;
-            }
-
-            return left.oamIndex < right.oamIndex;
-        }
-    );
-
-    const std::size_t rowStart =
-        static_cast<std::size_t>(ly_) * SCREEN_WIDTH;
-
-    for (std::size_t screenX = 0;
-         screenX < SCREEN_WIDTH;
-         ++screenX) {
-        const Sprite* winningSprite = nullptr;
-        std::uint8_t winningColorId = 0;
-
-        for (std::size_t i = 0; i < spriteCount; ++i) {
-            const Sprite& sprite = sprites[i];
-
-            const int spriteLeft =
-                static_cast<int>(sprite.x) - 8;
-
-            const int spriteTop =
-                static_cast<int>(sprite.y) - 16;
-
-            int spriteX =
-                static_cast<int>(screenX) - spriteLeft;
-
-            if (spriteX < 0 || spriteX >= 8) {
-                continue;
-            }
-
-            int spriteY =
-                static_cast<int>(ly_) - spriteTop;
-
-            if ((sprite.attributes & 0x20u) != 0) {
-                spriteX = 7 - spriteX;
-            }
-
-            if ((sprite.attributes & 0x40u) != 0) {
-                spriteY = spriteHeight - 1 - spriteY;
-            }
-
-            std::uint8_t tileId = sprite.tileId;
-            std::uint8_t tileRow = 0;
-
-            if (spriteHeight == 16) {
-                tileId =
-                    static_cast<std::uint8_t>(
-                        tileId & 0xFEu
-                    );
-
-                tileId = static_cast<std::uint8_t>(
-                    tileId +
-                    static_cast<std::uint8_t>(
-                        spriteY / 8
-                    )
-                );
-
-                tileRow =
-                    static_cast<std::uint8_t>(
-                        spriteY % 8
-                    );
-            } else {
-                tileRow =
-                    static_cast<std::uint8_t>(spriteY);
-            }
-
-            const std::uint16_t tileAddress =
-                static_cast<std::uint16_t>(
-                    TILE_DATA_UNSIGNED_BASE +
-                    static_cast<std::uint16_t>(tileId) * 16u
-                );
-
-            const std::uint8_t colorId =
-                DecodeTilePixel(
-                    tileAddress,
-                    tileRow,
-                    static_cast<std::uint8_t>(spriteX)
-                );
-
-            // OBJ color ID 0 is transparent.
-            if (colorId == 0) {
-                continue;
-            }
-
-            winningSprite = &sprite;
-            winningColorId = colorId;
-            break;
-        }
-
-        if (winningSprite == nullptr) {
-            continue;
-        }
-
-        // Priority is resolved between objects first.
-        // Then the winning object is mixed with BG/Window.
-        const bool behindBackground =
-            (winningSprite->attributes & 0x80u) != 0;
-
-        if (behindBackground &&
-            bgColorIds_[screenX] != 0) {
-            continue;
-        }
-
-        const std::uint8_t palette =
-            (winningSprite->attributes & 0x10u) != 0
-                ? ReadBus(OBP1)
-                : ReadBus(OBP0);
-
-        framebuffer_[rowStart + screenX] =
-            ApplyPalette(winningColorId, palette);
-    }
-}
-
 std::uint16_t PPU::GetBackgroundTileMapBase(
     const std::uint8_t lcdc
 ) const noexcept {
@@ -724,35 +567,6 @@ std::uint16_t PPU::GetTileDataAddress(
         static_cast<std::int32_t>(signedTileId) * 16;
 
     return static_cast<std::uint16_t>(address);
-}
-
-std::uint8_t PPU::DecodeTilePixel(
-    const std::uint16_t tileAddress,
-    const std::uint8_t row,
-    const std::uint8_t column
-) const {
-    const std::uint16_t rowAddress =
-        static_cast<std::uint16_t>(
-            tileAddress +
-            static_cast<std::uint16_t>(row) * 2u
-        );
-
-    const std::uint8_t low = ReadBus(rowAddress);
-    const std::uint8_t high =
-        ReadBus(static_cast<std::uint16_t>(rowAddress + 1u));
-
-    const std::uint8_t bit =
-        static_cast<std::uint8_t>(7u - column);
-
-    const std::uint8_t lowBit =
-        static_cast<std::uint8_t>((low >> bit) & 0x01u);
-
-    const std::uint8_t highBit =
-        static_cast<std::uint8_t>((high >> bit) & 0x01u);
-
-    return static_cast<std::uint8_t>(
-        (highBit << 1u) | lowBit
-    );
 }
 
 std::uint8_t PPU::ApplyPalette(

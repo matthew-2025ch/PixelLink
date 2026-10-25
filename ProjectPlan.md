@@ -64,7 +64,7 @@
      - [x] VRAM / OAM access rules
      - [x] Bus-side CPU VRAM / OAM access enforcement
      - [x] Variable mode 3 timing (SCX, window and sprite fetch penalties; selected Mooneye timing ROMs pass)
-     - [ ] Pixel FIFO / fetcher if needed
+     - [x] Dot-stepped BG/window fetcher and BG/OBJ FIFOs; live palette output, scroll discard, window restart and object fetch stalls
 8. DMA
    - Part 1: Bus access model
      - [x] Distinguish CPU / PPU / DMA bus access
@@ -117,8 +117,8 @@
     - [x] CPU memory access timing within each instruction and DMA start / restart / completion / source rules
     - [x] PPU mode / sprite / SCX timing, LCD on/off and STAT / LYC / VBlank boundaries covered by the selected suite
     - [x] DMG serial transfer engine, interrupt and DMG ABC post-boot clock phase
-    -  Latest hardware run: 40/40 Mooneye ROMs plus 12/12 Blargg DMG sound ROMs pass; GameBoyTest has 194 passing cases. Debug and Release automatic CTest suites pass. Native Windows video and WASAPI device checks pass through DesktopTest.
-     See [HardwareAccuracy.md](HardwareAccuracy.md) for results and the next target.
+    - Accuracy scope and current test instructions are maintained in [README.md](README.md#dmg-准确性与阶段验收). Passing the selected DMG suite does not imply complete CGB/SGB or every hardware-revision quirk.
+    - Latest automatic regression (2026-10-25): 211/211 core cases, including 17 FIFO regressions, 40/40 Mooneye and 12/12 Blargg sound ROMs; Debug and Release CTest both pass 2/2.
 
 13. APU
     - [x] Four audio channels: CH1 sweep, CH2 pulse, CH3 wave, CH4 noise
@@ -129,7 +129,7 @@
     - [x] Advanced DMG APU accuracy: real DIV falling edges and DIV writes, power/length behavior, trigger quirks, sweep, wave RAM fetch access and retrigger corruption
     - [x] All 12 unmodified Blargg dmg_sound ROMs integrated into GameBoyTest; pinned version and SHA-256 manifest
     - [x] DAC conversion and sample-rate-dependent high-pass filtering
-    - Manual listening remains a user/device acceptance check; automated device/PCM checks cannot judge subjective sound quality. Revision-specific analog and zombie-envelope variations are outside the current DMG test set.
+    - [x] User acceptance of sound and battery saves (2026-10-25). Revision-specific analog and zombie-envelope variations remain outside the current DMG test set.
 
 ## Stage 2: WLAN Remote Controlling
 
