@@ -1,5 +1,25 @@
 # 硬件准确性修复与验收
 
+## SDL 稳定版固定与回归（2026-10-18）
+
+SDL 子模块从开发提交 `5d7167cbc98d1a47a940b4092b3505ebd2b95a95` 切换为
+官方稳定发布版 [3.4.18](https://github.com/libsdl-org/SDL/releases/tag/release-3.4.18)，
+固定提交为 `829a65d769d935c4852f8159e964312c0957260a`，不自动跟随上游更新。
+
+Windows x64 / MSVC，在 `out/build/local-msvc` 重新构建 Debug 和 Release 的
+`PixelLink`、`GameBoyTest`、`DesktopTest`、`FrontendTest`，均成功。
+两种配置的自动 CTest 项均为 **2/2 通过**；各有 **194/194** 核心测试通过，
+其中包含 **40/40 Mooneye** 和 **12/12 Blargg 音频 ROM**。
+Release 的 `DesktopTest --real-devices` 通过 Windows 视频与 WASAPI 音频设备检查。
+两种配置部署的 SDL3.dll 文件版本均确认为 **3.4.18**。
+
+本次未运行交互式 `FrontendTest`，也未进行人工听音或长时间游玩验收。
+记录见 `out/sdl-stable-release-tests.log`、`out/sdl-stable-debug-tests.log`、
+`out/sdl-stable-device-tests.log`；JUnit 结果位于构建目录的
+`sdl-stable-release-results.xml` 和 `sdl-stable-debug-results.xml`。
+
+以下为先前验收记录。
+
 检测日期：2026-10-03（Asia/Shanghai）；Windows x64 / MSVC / Debug。
 
 官方 Mooneye `mts-20260714-0944-31510e1` 的 40 个未经修改的 ROM，已从 **26 通过 / 14 失败** 提升至 **40 通过 / 0 失败**。2026-10-03 修复验收时，`GameBoyTest`、40 个独立 ROM 项与 `AudioFrontendTest` 共 **42/42** 通过，无跳过或预期失败项。

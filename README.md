@@ -63,6 +63,28 @@ cmake --build out/build/release --target PixelLink GameBoyTest DesktopTest Front
 ctest --test-dir out/build/release -R '^(GameBoyTest|DesktopTest)$' --output-on-failure
 ```
 
+### 依赖版本管理
+
+依赖通过 Git 子模块固定到主仓库记录的精确提交，不自动跟随上游分支：
+
+| 依赖 | 固定提交 | 说明 |
+| --- | --- | --- |
+| SDL | `829a65d769d935c4852f8159e964312c0957260a` | 官方稳定发布版 [3.4.18](https://github.com/libsdl-org/SDL/releases/tag/release-3.4.18)，标签 `release-3.4.18` |
+| spdlog | `79524ddd08a4ec981b7fea76afd08ee05f83755d` | v1.17.0 |
+
+正常初始化或同步使用 `git submodule update --init --recursive --checkout`。
+上游新增提交、执行 fetch 或更新主项目时，不会自动切换到 SDL 上游最新版本；
+子模块仍以主项目记录的提交为准。不要在日常同步中使用 `git submodule update --remote`。
+
+需要 SDL 的修复或新功能时，单独进行依赖升级，优先选择稳定发布标签；
+重新构建 Debug / Release，运行 `GameBoyTest`、`DesktopTest` 和
+`DesktopTest --real-devices`，再检查实际游戏画面和声音。
+验收通过后，将新的子模块提交指针与本节版本记录一起提交到主仓库。
+
+Android 工程中的 `.project`、`.classpath` 和 `.settings` 内的 Eclipse / Buildship
+配置是本地 IDE 生成文件，不应提交为 SDL 源码修改。本机已在 SDL 子模块的
+Git 本地排除配置中忽略这类文件；该配置不会修改上游 SDL，也不随主仓库传播。
+
 本机中文 MSVC 的 `/showIncludes` 前缀被 CMake 自动识别成乱码，需要在配置时加：
 `"-DPIXELLINK_MSVC_INCLUDE_PREFIX=注意: 包含文件:"`。
 此选项仅覆盖 Ninja 的依赖识别前缀；其它语言或生成器保持默认。
